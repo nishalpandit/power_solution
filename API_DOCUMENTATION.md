@@ -1480,5 +1480,59 @@ response :-
 - **Params:** `invoice_no`, `customer_name`, `quotation_id`, `quotation_no`, `customer_phone`, `customer_email`, `customer_address`, `payment_date`, `amount_received`, `payment_mode` (`Cash`, `Online`, `Cheque`, `UPI`), `transaction_no`, `reference_no`, `notes`, `status`, `payment_proof` (file)
 - **Response:** Created payment object with `invoice_no` and all details.
 
+---
+
+## 12. Order APIs (Create Order Screen)
+
+> **Full Documentation:** See [ORDER_API_DOCUMENTATION.md](file:///c:/Users/PC/Desktop/power_solution/ORDER_API_DOCUMENTATION.md) for complete details and request examples.
+
+### 12.1 Auto-Generate Next Order Number
+- **URL:** `http://192.168.1.59:8000/api/orders/next-order-number`
+- **Method:** `GET`
+- **Response:** `{"order_no": "ORD-260912-0001"}`
+
+### 12.2 Quotation Dropdown (For Select Quotation)
+- **URL:** `http://192.168.1.59:8000/api/orders/quotations`
+- **Method:** `GET`
+- **Response:** List of approved quotations with customer info, line items, and amount calculations formatted for Flutter.
+
+### 12.3 Create Order / Save Draft
+- **URL:** `http://192.168.1.59:8000/api/orders`
+- **Method:** `POST`
+- **Content-Type:** `application/json`
+- **Params:** `order_no`, `quotation_id`, `order_date`, `delivery_date`, `order_status`, `customer`, `subtotal`, `discount`, `tax`, `grand_total`, `advance_paid`, `balance_amount`, `payment_status`, `payment_mode`, `transaction_no`, `payment_date`, `special_instructions`, `internal_notes`, `terms_accepted`
+- **Response:** Created order object with status 201.
+
+---
+
+## 13. Cash Bill APIs (Generate Cash Bill Screen)
+
+> **Full Documentation:** See [CASH_BILL_API_DOCUMENTATION.md](file:///c:/Users/PC/Desktop/power_solution/CASH_BILL_API_DOCUMENTATION.md) for complete details, request examples, and calculation breakdowns.
+
+### 13.1 Auto-Generate Next Bill Number
+- **URL:** `http://192.168.1.59:8000/api/cash-bills/next-bill-number`
+- **Method:** `GET`
+- **Response:** `{"bill_no": "CB-260912-0001"}`
+
+### 13.2 Product Picker Master (Categories & Products)
+- **URL:** `http://192.168.1.59:8000/api/cash-bills/product-picker`
+- **Method:** `GET`
+- **Response:** Hierarchical master `product_types`, `categories`, and `products` matching Flutter bottom sheet.
+
+### 13.3 Calculate Bill (Live Calculations Preview)
+- **URL:** `http://192.168.1.59:8000/api/cash-bills/calculate`
+- **Method:** `POST`
+- **Params:** `items`, `discount`, `amount_paid`
+- **Response:** Computed `subtotal`, `taxable_amount`, `gst` (18%), `grand_total`, `change_returned`, `balance_amount`.
+
+### 13.4 Generate Cash Bill / Save Draft
+- **URL:** `http://192.168.1.59:8000/api/cash-bills`
+- **Method:** `POST`
+- **Content-Type:** `application/json`
+- **Params:** `bill_no`, `bill_date`, `customer_type`, `customer_name`, `mobile`, `items`, `discount`, `payment_mode`, `amount_paid`, `notes`, `status`
+- **Response:** Generated cash bill object with calculated totals.
+
+
+
 
 

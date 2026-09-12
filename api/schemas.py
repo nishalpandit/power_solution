@@ -1028,3 +1028,220 @@ class PaymentResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class OrderCustomerSchema(BaseModel):
+    name: Optional[str] = None
+    mobile: Optional[str] = None
+    email: Optional[str] = None
+    billing_address: Optional[str] = None
+    delivery_address: Optional[str] = None
+
+    model_config = {"extra": "allow"}
+
+
+class OrderCreateRequest(BaseModel):
+    order_no: Optional[str] = None
+    quotation_id: Optional[Any] = None
+    quotation_no: Optional[str] = None
+    order_date: Optional[str] = None
+    delivery_date: Optional[str] = None
+    order_status: Optional[str] = "Pending"
+
+    # Nested or flat customer
+    customer: Optional[Union[OrderCustomerSchema, Dict[str, Any]]] = None
+    customer_name: Optional[str] = None
+    mobile: Optional[str] = None
+    email: Optional[str] = None
+    billing_address: Optional[str] = None
+    delivery_address: Optional[str] = None
+
+    # Line items
+    items: Optional[List[Any]] = None
+
+    # Amounts
+    subtotal: Optional[float] = None
+    discount: Optional[float] = None
+    taxable_amount: Optional[float] = None
+    tax: Optional[float] = None
+    grand_total: Optional[float] = None
+    advance_paid: Optional[float] = 0.0
+    balance_amount: Optional[float] = None
+
+    # Delivery instructions
+    special_instructions: Optional[str] = None
+
+    # Payment
+    payment_status: Optional[str] = "Not Paid"
+    payment_mode: Optional[str] = "Bank Transfer"
+    transaction_no: Optional[str] = None
+    payment_date: Optional[str] = None
+
+    # Additional
+    internal_notes: Optional[str] = None
+    terms_accepted: Optional[bool] = True
+
+    model_config = {"extra": "allow"}
+
+
+class OrderUpdateRequest(BaseModel):
+    order_no: Optional[str] = None
+    order_date: Optional[str] = None
+    delivery_date: Optional[str] = None
+    order_status: Optional[str] = None
+    customer_name: Optional[str] = None
+    mobile: Optional[str] = None
+    email: Optional[str] = None
+    billing_address: Optional[str] = None
+    delivery_address: Optional[str] = None
+    items: Optional[List[Any]] = None
+    subtotal: Optional[float] = None
+    discount: Optional[float] = None
+    taxable_amount: Optional[float] = None
+    tax: Optional[float] = None
+    grand_total: Optional[float] = None
+    advance_paid: Optional[float] = None
+    balance_amount: Optional[float] = None
+    special_instructions: Optional[str] = None
+    payment_status: Optional[str] = None
+    payment_mode: Optional[str] = None
+    transaction_no: Optional[str] = None
+    payment_date: Optional[str] = None
+    internal_notes: Optional[str] = None
+    terms_accepted: Optional[bool] = None
+
+    model_config = {"extra": "allow"}
+
+
+class OrderResponse(BaseModel):
+    id: int
+    order_no: str
+    order_date: str
+    delivery_date: Optional[str] = None
+    order_status: str
+    quotation_id: Optional[int] = None
+    quotation_no: Optional[str] = None
+    customer_name: str
+    mobile: Optional[str] = None
+    email: Optional[str] = None
+    billing_address: Optional[str] = None
+    delivery_address: Optional[str] = None
+    customer: Optional[Dict[str, Any]] = None
+    items: List[Any] = []
+    subtotal: float = 0.0
+    discount: float = 0.0
+    taxable_amount: float = 0.0
+    tax: float = 0.0
+    grand_total: float = 0.0
+    advance_paid: float = 0.0
+    balance_amount: float = 0.0
+    special_instructions: Optional[str] = None
+    payment_status: str = "Not Paid"
+    payment_mode: str = "Bank Transfer"
+    transaction_no: Optional[str] = None
+    payment_date: Optional[str] = None
+    internal_notes: Optional[str] = None
+    terms_accepted: bool = True
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ==============================================================================
+# CASH BILL SCHEMAS (GenerateCashBillScreen)
+# ==============================================================================
+
+class CashBillCalculateRequest(BaseModel):
+    items: List[Dict[str, Any]] = []
+    discount: Optional[float] = 0.0
+    amount_paid: Optional[float] = 0.0
+
+    model_config = {"extra": "allow"}
+
+
+class CashBillCalculateResponse(BaseModel):
+    subtotal: float
+    discount: float
+    taxable_amount: float
+    gst_rate: float
+    gst: float
+    grand_total: float
+    amount_paid: float
+    change_returned: float
+    balance_amount: float
+    payment_status: str
+
+
+class CashBillCreateRequest(BaseModel):
+    bill_no: Optional[str] = None
+    bill_date: Optional[str] = None
+    customer_type: Optional[str] = "Walk-in Customer"
+    customer_name: str
+    mobile: Optional[str] = None
+
+    items: List[Dict[str, Any]] = []
+
+    # Amounts can be passed or backend auto-calculates
+    subtotal: Optional[float] = None
+    discount: Optional[float] = 0.0
+    taxable_amount: Optional[float] = None
+    gst_rate: Optional[float] = 0.18
+    gst_amount: Optional[float] = None
+    grand_total: Optional[float] = None
+
+    # Payment
+    payment_mode: Optional[str] = "Cash"
+    amount_paid: Optional[float] = 0.0
+    change_returned: Optional[float] = None
+    balance_amount: Optional[float] = None
+    payment_status: Optional[str] = None
+
+    # Additional
+    notes: Optional[str] = None
+    status: Optional[str] = "Generated"
+
+    model_config = {"extra": "allow"}
+
+
+class CashBillUpdateRequest(BaseModel):
+    customer_type: Optional[str] = None
+    customer_name: Optional[str] = None
+    mobile: Optional[str] = None
+    items: Optional[List[Dict[str, Any]]] = None
+    discount: Optional[float] = None
+    payment_mode: Optional[str] = None
+    amount_paid: Optional[float] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None
+
+    model_config = {"extra": "allow"}
+
+
+class CashBillResponse(BaseModel):
+    id: int
+    bill_no: str
+    bill_date: str
+    customer_type: str
+    customer_name: str
+    mobile: Optional[str] = None
+    items: List[Dict[str, Any]] = []
+    subtotal: float
+    discount: float
+    taxable_amount: float
+    gst_rate: float
+    gst_amount: float
+    grand_total: float
+    payment_mode: str
+    amount_paid: float
+    change_returned: float
+    balance_amount: float
+    payment_status: str
+    notes: Optional[str] = None
+    status: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+
+

@@ -180,4 +180,105 @@ class Payment(Base):
         )
 
 
+class Order(Base):
+    __tablename__ = "orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_no = Column(String(60), unique=True, index=True, nullable=False)
+    order_date = Column(String(50), nullable=False)
+    delivery_date = Column(String(50), nullable=True)
+    order_status = Column(String(30), default="Pending", nullable=False)  # Pending, Confirmed, Processing, Completed, Cancelled, Draft
+
+    # Quotation Link
+    quotation_id = Column(Integer, ForeignKey("quotations.id", ondelete="SET NULL"), nullable=True, index=True)
+    quotation_no = Column(String(60), nullable=True, index=True)
+
+    # Customer Details
+    customer_name = Column(String(150), nullable=False, index=True)
+    mobile = Column(String(50), nullable=True)
+    email = Column(String(120), nullable=True)
+    billing_address = Column(Text, nullable=True)
+    delivery_address = Column(Text, nullable=True)
+
+    # Products / Items (stored as JSON array)
+    items = Column(JSON, nullable=False, default=list)
+
+    # Pricing & Summary
+    subtotal = Column(Float, default=0.0, nullable=False)
+    discount = Column(Float, default=0.0, nullable=False)
+    taxable_amount = Column(Float, default=0.0, nullable=False)
+    tax = Column(Float, default=0.0, nullable=False)
+    grand_total = Column(Float, default=0.0, nullable=False)
+    advance_paid = Column(Float, default=0.0, nullable=False)
+    balance_amount = Column(Float, default=0.0, nullable=False)
+
+    # Delivery & Installation
+    special_instructions = Column(Text, nullable=True)
+
+    # Payment Details
+    payment_status = Column(String(30), default="Not Paid", nullable=False)  # Not Paid, Partially Paid, Paid
+    payment_mode = Column(String(50), default="Bank Transfer", nullable=False)  # Cash, Bank Transfer, UPI, Cheque, Card, Other
+    transaction_no = Column(String(100), nullable=True)
+    payment_date = Column(String(50), nullable=True)
+
+    # Additional
+    internal_notes = Column(Text, nullable=True)
+    terms_accepted = Column(Boolean, default=True, nullable=False)
+
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    quotation = relationship("Quotation", backref="orders")
+
+    def __repr__(self):
+        return (
+            f"<Order id={self.id} no='{self.order_no}' customer='{self.customer_name}' "
+            f"total={self.grand_total} status='{self.order_status}'>"
+        )
+
+
+class CashBill(Base):
+    __tablename__ = "cash_bills"
+
+    id = Column(Integer, primary_key=True, index=True)
+    bill_no = Column(String(60), unique=True, index=True, nullable=False)
+    bill_date = Column(String(50), nullable=False)
+    customer_type = Column(String(50), default="Walk-in Customer", nullable=False)  # "Walk-in Customer" or "Existing Customer"
+    customer_name = Column(String(150), nullable=False, index=True)
+    mobile = Column(String(50), nullable=True)
+
+    # Line items with specifications, price, qty, total
+    items = Column(JSON, nullable=False, default=list)
+
+    # Calculations
+    subtotal = Column(Float, default=0.0, nullable=False)
+    discount = Column(Float, default=0.0, nullable=False)
+    taxable_amount = Column(Float, default=0.0, nullable=False)
+    gst_rate = Column(Float, default=0.18, nullable=False)
+    gst_amount = Column(Float, default=0.0, nullable=False)
+    grand_total = Column(Float, default=0.0, nullable=False)
+
+    # Payment settlement
+    payment_mode = Column(String(50), default="Cash", nullable=False)  # "Cash", "UPI", "Card", "Bank Transfer"
+    amount_paid = Column(Float, default=0.0, nullable=False)
+    change_returned = Column(Float, default=0.0, nullable=False)
+    balance_amount = Column(Float, default=0.0, nullable=False)
+    payment_status = Column(String(30), default="Paid", nullable=False)  # "Paid", "Partially Paid", "Unpaid"
+
+    # Additional
+    notes = Column(Text, nullable=True)
+    status = Column(String(30), default="Generated", nullable=False)  # "Generated", "Draft", "Cancelled"
+
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    def __repr__(self):
+        return (
+            f"<CashBill id={self.id} no='{self.bill_no}' customer='{self.customer_name}' "
+            f"total={self.grand_total} status='{self.status}'>"
+        )
+
+
+
+
 

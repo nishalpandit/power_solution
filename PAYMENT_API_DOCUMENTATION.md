@@ -113,11 +113,7 @@ method : GET
 
 params :- 
 
-search:Skyline
-customer_name:Skyline Enterprises
-payment_mode:Online
-status:Received
-invoice_no:INV-260911-0001
+(None)
 
 response :- 
 
