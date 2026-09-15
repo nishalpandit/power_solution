@@ -8,8 +8,11 @@ from fastapi.staticfiles import StaticFiles
 from api.views import router as api_router
 from core.settings import Base, engine, ensure_database_schema
 
-os.makedirs("uploads/categories", exist_ok=True)
-os.makedirs("uploads/products", exist_ok=True)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+uploads_dir = os.path.join(BASE_DIR, "uploads")
+os.makedirs(os.path.join(uploads_dir, "categories"), exist_ok=True)
+os.makedirs(os.path.join(uploads_dir, "products"), exist_ok=True)
+os.makedirs(os.path.join(uploads_dir, "payments"), exist_ok=True)
 
 # Initialize database tables
 ensure_database_schema()
@@ -28,7 +31,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 # Include API Router
 app.include_router(api_router, prefix="/api")

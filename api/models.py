@@ -279,6 +279,135 @@ class CashBill(Base):
         )
 
 
+class Supplier(Base):
+    __tablename__ = "suppliers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    supplier_code = Column(String(50), unique=True, index=True, nullable=False)  # e.g. "SUP001"
+    name = Column(String(150), nullable=False, index=True)
+    contact_person = Column(String(100), nullable=True)
+    mobile = Column(String(50), nullable=True)
+    email = Column(String(120), nullable=True)
+    address = Column(Text, nullable=True)
+    gstin = Column(String(50), nullable=True)
+
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    def __repr__(self):
+        return f"<Supplier id={self.id} code='{self.supplier_code}' name='{self.name}'>"
+
+
+class PurchaseOrder(Base):
+    __tablename__ = "purchase_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    po_number = Column(String(60), unique=True, index=True, nullable=False)  # e.g. "PO-260914-0001"
+    po_date = Column(String(50), nullable=False)
+    expected_delivery = Column(String(50), nullable=True)
+    po_status = Column(String(30), default="Draft", nullable=False)  # Draft, Pending, Approved, Ordered, Received, Cancelled
+    payment_terms = Column(String(50), default="30 Days", nullable=False)
+    reference = Column(String(100), nullable=True)
+
+    # Supplier info
+    supplier_id = Column(Integer, ForeignKey("suppliers.id", ondelete="SET NULL"), nullable=True, index=True)
+    supplier_code = Column(String(50), nullable=True)
+    supplier_name = Column(String(150), nullable=False)
+    contact_person = Column(String(100), nullable=True)
+    mobile = Column(String(50), nullable=True)
+    email = Column(String(120), nullable=True)
+    address = Column(Text, nullable=True)
+
+    # Items
+    items = Column(JSON, nullable=False, default=list)
+
+    # Totals
+    subtotal = Column(Float, default=0.0, nullable=False)
+    gst_total = Column(Float, default=0.0, nullable=False)
+    grand_total = Column(Float, default=0.0, nullable=False)
+
+    # Additional
+    notes = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    supplier = relationship("Supplier", backref="purchase_orders")
+
+    def __repr__(self):
+        return (
+            f"<PurchaseOrder id={self.id} no='{self.po_number}' supplier='{self.supplier_name}' "
+            f"total={self.grand_total} status='{self.po_status}'>"
+        )
+
+
+class StockIn(Base):
+    __tablename__ = "stock_in_receipts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    receipt_no = Column(String(60), unique=True, index=True, nullable=False)
+    receipt_date = Column(String(50), nullable=False)
+    po_number = Column(String(60), nullable=True, index=True)
+    invoice_no = Column(String(60), nullable=False, index=True)
+    invoice_date = Column(String(50), nullable=False)
+
+    # Supplier Details
+    supplier_id = Column(Integer, ForeignKey("suppliers.id", ondelete="SET NULL"), nullable=True, index=True)
+    supplier_code = Column(String(50), nullable=True, index=True)
+    supplier_name = Column(String(150), nullable=False)
+    supplier_contact = Column(String(50), nullable=True)
+
+    # Product Details
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="SET NULL"), nullable=True, index=True)
+    product_sku = Column(String(100), nullable=True, index=True)
+    product_type = Column(String(50), nullable=False, index=True)
+    category = Column(String(100), nullable=False, index=True)
+    product_name = Column(String(150), nullable=False, index=True)
+    specifications = Column(JSON, nullable=True, default=dict)
+
+    # Stock Details
+    quantity = Column(Float, default=1.0, nullable=False)
+    unit = Column(String(50), default="Nos", nullable=False)
+    warehouse = Column(String(100), default="Main Warehouse", nullable=False)
+    rack = Column(String(100), nullable=True)
+    batch_no = Column(String(100), nullable=True)
+    serial_no = Column(String(150), nullable=True)
+
+    # Pricing & Tax
+    rate = Column(Float, default=0.0, nullable=False)
+    discount = Column(Float, default=0.0, nullable=False)
+    gst = Column(Float, default=18.0, nullable=False)
+    gross_amount = Column(Float, default=0.0, nullable=False)
+    taxable_amount = Column(Float, default=0.0, nullable=False)
+    gst_amount = Column(Float, default=0.0, nullable=False)
+    total_amount = Column(Float, default=0.0, nullable=False)
+
+    # Receiving & Inspection
+    received_by = Column(String(100), nullable=False)
+    condition = Column(String(50), default="Good", nullable=False)
+    inspection_status = Column(String(50), default="Pending", nullable=False)
+    inspection_remarks = Column(Text, nullable=True)
+
+    # Notes & Status
+    notes = Column(Text, nullable=True)
+    status = Column(String(30), default="Received", nullable=False)
+
+    # Timestamps
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    supplier = relationship("Supplier", backref="stock_ins")
+    product = relationship("Product", backref="stock_ins")
+
+    def __repr__(self):
+        return (
+            f"<StockIn id={self.id} receipt='{self.receipt_no}' product='{self.product_name}' "
+            f"qty={self.quantity} total={self.total_amount}>"
+        )
+
+
+
+
 
 
 

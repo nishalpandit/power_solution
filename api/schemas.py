@@ -1243,5 +1243,308 @@ class CashBillResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ==============================================================================
+# PURCHASE ORDER & SUPPLIER SCHEMAS (AddPurchaseOrderScreen)
+# ==============================================================================
+
+class SupplierCreateRequest(BaseModel):
+    supplier_code: Optional[str] = None
+    name: str
+    contact_person: Optional[str] = None
+    mobile: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    gstin: Optional[str] = None
+
+    model_config = {"extra": "allow"}
+
+
+class SupplierResponse(BaseModel):
+    id: Union[int, str]
+    supplier_id: int
+    supplier_code: str
+    name: str
+    contact: Optional[str] = None
+    contact_person: Optional[str] = None
+    mobile: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    gstin: Optional[str] = None
+
+    model_config = {"from_attributes": True, "extra": "allow"}
+
+
+class PurchaseCalculateRequest(BaseModel):
+    items: List[Dict[str, Any]] = []
+
+    model_config = {"extra": "allow"}
+
+
+class PurchaseCalculateResponse(BaseModel):
+    subtotal: float
+    gst_total: float
+    grand_total: float
+
+
+class PurchaseOrderCreateRequest(BaseModel):
+    po_number: Optional[str] = None
+    supplier_id: Optional[Any] = None
+    supplier_name: Optional[str] = None
+    contact_person: Optional[str] = None
+    mobile: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+
+    po_date: Optional[str] = None
+    expected_delivery: Optional[str] = None
+    payment_terms: Optional[str] = "30 Days"
+    status: Optional[str] = "Draft"
+    po_status: Optional[str] = None
+    reference: Optional[str] = None
+
+    items: List[Dict[str, Any]] = []
+
+    subtotal: Optional[float] = None
+    gst_total: Optional[float] = None
+    grand_total: Optional[float] = None
+
+    notes: Optional[str] = None
+
+    model_config = {"extra": "allow"}
+
+
+class PurchaseOrderUpdateRequest(BaseModel):
+    po_date: Optional[str] = None
+    expected_delivery: Optional[str] = None
+    payment_terms: Optional[str] = None
+    status: Optional[str] = None
+    po_status: Optional[str] = None
+    reference: Optional[str] = None
+    supplier_name: Optional[str] = None
+    contact_person: Optional[str] = None
+    mobile: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    items: Optional[List[Dict[str, Any]]] = None
+    notes: Optional[str] = None
+
+    model_config = {"extra": "allow"}
+
+
+class PurchaseOrderResponse(BaseModel):
+    id: int
+    po_number: str
+    po_date: str
+    expected_delivery: Optional[str] = None
+    po_status: str
+    payment_terms: str
+    reference: Optional[str] = None
+    supplier_id: Optional[int] = None
+    supplier_code: Optional[str] = None
+    supplier_name: str
+    contact_person: Optional[str] = None
+    mobile: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    items: List[Dict[str, Any]] = []
+    subtotal: float
+    gst_total: float
+    grand_total: float
+    notes: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ==============================================================================
+# STOCK IN & CATEGORY INVENTORY SCHEMAS (StockInScreen)
+# ==============================================================================
+
+class CategoryStockItem(BaseModel):
+    category_name: str
+    product_count: int
+    total_stock: float
+    total_valuation: float
+    unit: str = "Nos"
+    products: List[Dict[str, Any]] = []
+
+
+class CategoryTypeStockSummary(BaseModel):
+    category_type: str
+    total_stock: float
+    total_products: int
+    total_valuation: float
+    categories: List[CategoryStockItem] = []
+
+
+class CategoryStockResponse(BaseModel):
+    category_types: List[str]
+    stocks_by_category_type: Dict[str, CategoryTypeStockSummary]
+    overall_total_stock: float
+    overall_total_valuation: float
+
+
+class StockInCalculateRequest(BaseModel):
+    quantity: float = 1.0
+    rate: float = 0.0
+    discount: float = 0.0
+    gst: float = 18.0
+
+    model_config = {"extra": "allow"}
+
+
+class StockInCalculateResponse(BaseModel):
+    quantity: float
+    rate: float
+    discount: float
+    gross_amount: float
+    taxable_amount: float
+    gst_rate: float
+    gst_amount: float
+    total_amount: float
+
+
+class StockInCreateRequest(BaseModel):
+    receipt_no: Optional[str] = None
+    receipt_date: Optional[str] = None
+    po_number: Optional[str] = None
+    invoice_no: str
+    invoice_date: Optional[str] = None
+
+    supplier_id: Optional[Any] = None
+    supplier_code: Optional[str] = None
+    supplier_name: Optional[str] = None
+    supplier_contact: Optional[str] = None
+
+    product_id: Optional[int] = None
+    product_sku: Optional[str] = None
+    product_type: str
+    category: str
+    product: Optional[str] = None
+    product_name: Optional[str] = None
+
+    quantity: float = 1.0
+    unit: Optional[str] = "Nos"
+    warehouse: Optional[str] = "Main Warehouse"
+    rack: Optional[str] = None
+    batch_no: Optional[str] = None
+    serial_no: Optional[str] = None
+
+    rate: float = 0.0
+    discount: Optional[float] = 0.0
+    gst: Optional[float] = 18.0
+    taxable_amount: Optional[float] = None
+    gst_amount: Optional[float] = None
+    total_amount: Optional[float] = None
+
+    received_by: str
+    condition: Optional[str] = "Good"
+    inspection_status: Optional[str] = "Pending"
+    inspection_remarks: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[str] = "Received"
+    specifications: Optional[Dict[str, Any]] = None
+
+    model_config = {"extra": "allow"}
+
+
+class StockInUpdateRequest(BaseModel):
+    receipt_date: Optional[str] = None
+    po_number: Optional[str] = None
+    invoice_no: Optional[str] = None
+    invoice_date: Optional[str] = None
+
+    supplier_id: Optional[Any] = None
+    supplier_code: Optional[str] = None
+    supplier_name: Optional[str] = None
+    supplier_contact: Optional[str] = None
+
+    product_sku: Optional[str] = None
+    product_type: Optional[str] = None
+    category: Optional[str] = None
+    product_name: Optional[str] = None
+
+    quantity: Optional[float] = None
+    unit: Optional[str] = None
+    warehouse: Optional[str] = None
+    rack: Optional[str] = None
+    batch_no: Optional[str] = None
+    serial_no: Optional[str] = None
+
+    rate: Optional[float] = None
+    discount: Optional[float] = None
+    gst: Optional[float] = None
+
+    received_by: Optional[str] = None
+    condition: Optional[str] = None
+    inspection_status: Optional[str] = None
+    inspection_remarks: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None
+    specifications: Optional[Dict[str, Any]] = None
+
+    model_config = {"extra": "allow"}
+
+
+class StockInResponse(BaseModel):
+    id: int
+    receipt_no: str
+    receipt_date: str
+    po_number: Optional[str] = None
+    invoice_no: str
+    invoice_date: str
+
+    supplier_id: Optional[int] = None
+    supplier_code: Optional[str] = None
+    supplier_name: str
+    supplier_contact: Optional[str] = None
+
+    product_id: Optional[int] = None
+    product_sku: Optional[str] = None
+    product_type: str
+    category: str
+    product_name: str
+    product: str
+    specifications: Dict[str, Any] = {}
+
+    quantity: float
+    unit: str
+    warehouse: str
+    rack: Optional[str] = None
+    batch_no: Optional[str] = None
+    serial_no: Optional[str] = None
+
+    rate: float
+    discount: float
+    gst: float
+    gross_amount: float
+    taxable_amount: float
+    gst_amount: float
+    total_amount: float
+
+    received_by: str
+    condition: str
+    inspection_status: str
+    inspection_remarks: Optional[str] = None
+    notes: Optional[str] = None
+    status: str
+
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True, "extra": "allow"}
+
+
+class StockInMetaResponse(BaseModel):
+    warehouses: List[str]
+    units: List[str]
+    conditions: List[str]
+    inspection_statuses: List[str]
+    gst_rates: List[int]
+
+
+
+
 
 

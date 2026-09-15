@@ -304,7 +304,7 @@ method : PUT
 
 params :- 
 
-notes:Updated: Receipt handed over to customer
+notes:Updated: Receipt handed over to customero0
 customer_type:Existing Customer
 
 response :- 

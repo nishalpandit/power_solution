@@ -1532,6 +1532,56 @@ response :-
 - **Params:** `bill_no`, `bill_date`, `customer_type`, `customer_name`, `mobile`, `items`, `discount`, `payment_mode`, `amount_paid`, `notes`, `status`
 - **Response:** Generated cash bill object with calculated totals.
 
+---
+
+## 14. Purchase Order APIs (Add Purchase Order Screen)
+
+> **Full Documentation:** See [PURCHASE_API_DOCUMENTATION.md](file:///c:/Users/PC/Desktop/power_solution/PURCHASE_API_DOCUMENTATION.md) for complete details, request examples, and calculation breakdowns.
+
+### 14.1 Auto-Generate Next PO Number
+- **URL:** `http://192.168.1.59:8000/api/purchases/next-po-number`
+- **Method:** `GET`
+- **Params:** `(None)`
+- **Response:** `{"po_number": "PO-260914-0001"}`
+
+### 14.2 Supplier Dropdown (Select Supplier)
+- **URL:** `http://192.168.1.59:8000/api/purchases/suppliers`
+- **Method:** `GET`
+- **Params:** `(None)`
+- **Response:** List of suppliers with code, name, contact person, mobile, email, and address.
+
+### 14.3 Add New Supplier
+- **URL:** `http://192.168.1.59:8000/api/purchases/suppliers`
+- **Method:** `POST`
+- **Params:** `name`, `supplier_code` (optional), `contact_person`, `mobile`, `email`, `address`, `gstin`
+- **Response:** Created supplier object with assigned code.
+
+### 14.4 Purchase Product Picker Master
+- **URL:** `http://192.168.1.59:8000/api/purchases/product-picker`
+- **Method:** `GET`
+- **Params:** `(None)`
+- **Response:** Hierarchical master with `purchasePrice`, `sku`, `unit`, `gst` (18%), and technical specifications.
+
+### 14.5 Calculate Purchase Order (Live Preview)
+- **URL:** `http://192.168.1.59:8000/api/purchases/calculate`
+- **Method:** `POST`
+- **Params:** `items`
+- **Response:** Computed `subtotal`, `gst_total` (18%), and `grand_total`.
+
+### 14.6 Place Purchase Order / Save Draft
+- **URL:** `http://192.168.1.59:8000/api/purchases`
+- **Method:** `POST`
+- **Content-Type:** `application/json`
+- **Params:** `po_number`, `supplier_id`, `po_date`, `expected_delivery`, `payment_terms`, `status`, `reference`, `items`, `notes`
+- **Response:** Created purchase order object with computed totals.
+
+### 14.7 List All Purchase Orders
+- **URL:** `http://192.168.1.59:8000/api/purchases`
+- **Method:** `GET`
+- **Params:** `(None)`
+- **Response:** List of purchase orders with summary counts and totals.
+
+
 
 
 

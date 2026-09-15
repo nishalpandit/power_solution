@@ -1,29 +1,109 @@
+"""Application settings for Power Solution API."""
 import os
+import urllib.parse
+from pathlib import Path
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# Base Directory
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# ── Base Directory ──────────────────────────────────────────────────────────
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Database Configuration (SQLite)
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(BASE_DIR, 'db.sqlite3')}")
+# Load environment variables from a .env file in the project root.
+load_dotenv(BASE_DIR / '.env')
 
-# Connect args needed for SQLite when using multithreading in FastAPI and to avoid lock errors
-connect_args = {"check_same_thread": False, "timeout": 30} if DATABASE_URL.startswith("sqlite") else {}
+# ── Security ────────────────────────────────────────────────────────────────
+SECRET_KEY = os.environ.get('SECRET_KEY', os.environ.get('SESSION_SECRET', 'power-solution-secret-key-change-in-production-2026'))
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+ALLOWED_HOSTS = ['*']
+
+ALGORITHM = 'HS256'
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days for mobile session persistence
+
+# ── Internationalization & Timezone ─────────────────────────────────────────
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = os.environ.get('TIME_ZONE', 'Asia/Kolkata')
+USE_I18N = True
+USE_TZ = False
+
+# ── Static & Media files ────────────────────────────────────────────────────
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'static'
+
+MEDIA_URL = '/uploads/'
+MEDIA_ROOT = BASE_DIR / 'uploads'
+
+# ── Database ────────────────────────────────────────────────────────────────
+# Configured for both cPanel MySQL and local SQLite fallback.
+MYSQL_DB = os.environ.get('MYSQL_DATABASE', '')
+MYSQL_USER = os.environ.get('MYSQL_USER', '')
+MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD', '')
+MYSQL_HOST = os.environ.get('MYSQL_HOST', 'localhost')
+MYSQL_PORT = os.environ.get('MYSQL_PORT', '3306')
+
+if MYSQL_DB:
+    # URL-encode password in case it contains special characters
+    encoded_pass = urllib.parse.quote_plus(MYSQL_PASSWORD)
+    user_part = f"{MYSQL_USER}:{encoded_pass}@" if MYSQL_USER else ""
+    DATABASE_URL = f"mysql+pymysql://{user_part}{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}?charset=utf8mb4"
+    connect_args = {
+        "init_command": "SET time_zone = '+05:30'",
+        "charset": "utf8mb4",
+    }
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': MYSQL_DB,
+            'USER': MYSQL_USER,
+            'PASSWORD': MYSQL_PASSWORD,
+            'HOST': MYSQL_HOST,
+            'PORT': MYSQL_PORT,
+            'OPTIONS': {
+                'charset': 'utf8mb4',
+                'init_command': "SET time_zone = '+05:30'",
+            },
+        }
+    }
+else:
+    DATABASE_URL = os.environ.get('DATABASE_URL', f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
+    connect_args = {"check_same_thread": False, "timeout": 30} if DATABASE_URL.startswith("sqlite") else {}
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3' if DATABASE_URL.startswith("sqlite") else 'django.db.backends.mysql',
+            'NAME': str(BASE_DIR / 'db.sqlite3') if DATABASE_URL.startswith("sqlite") else 'power_solution',
+        }
+    }
+
+# SQLAlchemy engine & session for FastAPI backend
+engine = create_engine(
+    DATABASE_URL,
+    connect_args=connect_args,
+    pool_recycle=3600 if not DATABASE_URL.startswith("sqlite") else -1,
+    pool_pre_ping=True,
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Security & JWT Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "power-solution-secret-key-change-in-production-2026")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days for mobile session persistence
+
+# ── Database Dependency & Schema Initializer ────────────────────────────────
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 def ensure_database_schema():
     import api.models  # Register all models with Base.metadata
     Base.metadata.create_all(bind=engine)
+
+    # SQLite-specific WAL mode and legacy schema checks
+    if not DATABASE_URL.startswith("sqlite"):
+        return
 
     with engine.begin() as connection:
         connection.exec_driver_sql("PRAGMA journal_mode=WAL")
@@ -78,12 +158,3 @@ def ensure_database_schema():
                 )
                 connection.exec_driver_sql("DROP TABLE users_legacy")
                 return
-
-
-# Database dependency for FastAPI routes
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
