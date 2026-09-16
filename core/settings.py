@@ -1,4 +1,3 @@
-"""Application settings for Power Solution API."""
 import os
 import urllib.parse
 from pathlib import Path

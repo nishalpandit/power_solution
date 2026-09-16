@@ -1474,7 +1474,7 @@ response :-
 - **Response:** List of customers with phone, email, address, and quotation details.
 
 ### 11.3 Add Payment
-- **URL:** `http://192.168.1.59:8000/api/payments`
+- **URL:** `http://192.168.1.59:8000/api/payments/add` *(also supports `http://192.168.1.59:8000/api/payment/add` and `http://192.168.1.59:8000/api/payments`)*
 - **Method:** `POST`
 - **Content-Type:** `multipart/form-data` or `application/json`
 - **Params:** `invoice_no`, `customer_name`, `quotation_id`, `quotation_no`, `customer_phone`, `customer_email`, `customer_address`, `payment_date`, `amount_received`, `payment_mode` (`Cash`, `Online`, `Cheque`, `UPI`), `transaction_no`, `reference_no`, `notes`, `status`, `payment_proof` (file)

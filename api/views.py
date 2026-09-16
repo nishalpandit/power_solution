@@ -1782,8 +1782,13 @@ def get_customers_from_quotations(db: Session = Depends(get_db)):
     }
 
 
-@router.post("/payments", status_code=status.HTTP_201_CREATED)
+@router.post("/payments/add", status_code=status.HTTP_201_CREATED)
 @router.post("/payment/add", status_code=status.HTTP_201_CREATED)
+@router.post("/payments/create", status_code=status.HTTP_201_CREATED)
+@router.post("/payment/create", status_code=status.HTTP_201_CREATED)
+@router.post("/payments", status_code=status.HTTP_201_CREATED)
+@router.post("/payment", status_code=status.HTTP_201_CREATED)
+@router.post("/add-payment", status_code=status.HTTP_201_CREATED)
 async def create_payment(
     request: Request,
     db: Session = Depends(get_db),
@@ -1813,9 +1818,11 @@ async def create_payment(
         except Exception:
             payload = {}
 
-    customer_name = str(payload.get("customer_name") or "").strip()
-    if not customer_name:
-        raise HTTPException(status_code=400, detail="Customer name is required")
+    customer_name = str(
+        payload.get("customer_name")
+        or (payload.get("customer") if isinstance(payload.get("customer"), str) else (payload.get("customer", {}).get("name") if isinstance(payload.get("customer"), dict) else ""))
+        or ""
+    ).strip()
 
     amount_received = payload.get("amount_received")
     if amount_received is None or str(amount_received).strip() == "":
@@ -1844,32 +1851,37 @@ async def create_payment(
     status_val = str(payload.get("status") or "Received").strip().capitalize()
 
     # Link quotation details if provided
-    quotation_id = payload.get("quotation_id")
+    quotation_id_val = payload.get("quotation_id")
     quotation_no = str(payload.get("quotation_no") or "").strip() or None
-    customer_phone = str(payload.get("customer_phone") or payload.get("phone") or "").strip() or None
+    customer_phone = str(payload.get("customer_phone") or payload.get("phone") or payload.get("mobile") or "").strip() or None
     customer_email = str(payload.get("customer_email") or payload.get("email") or "").strip() or None
-    customer_address = str(payload.get("customer_address") or payload.get("address") or "").strip() or None
+    customer_address = str(payload.get("customer_address") or payload.get("address") or payload.get("billing_address") or "").strip() or None
 
-    if quotation_id and str(quotation_id).isdigit():
-        q_obj = db.query(Quotation).filter(Quotation.id == int(quotation_id)).first()
-        if q_obj:
-            quotation_no = q_obj.quotation_no
-            if not customer_phone:
-                customer_phone = q_obj.phone
-            if not customer_email:
-                customer_email = q_obj.email
-            if not customer_address:
-                customer_address = q_obj.address
-    elif quotation_no:
+    q_obj = None
+    if quotation_id_val is not None:
+        if str(quotation_id_val).isdigit():
+            q_obj = db.query(Quotation).filter(Quotation.id == int(quotation_id_val)).first()
+        else:
+            q_obj = db.query(Quotation).filter(Quotation.quotation_no == str(quotation_id_val).strip()).first()
+    if not q_obj and quotation_no:
         q_obj = db.query(Quotation).filter(Quotation.quotation_no == quotation_no).first()
-        if q_obj:
-            quotation_id = q_obj.id
-            if not customer_phone:
-                customer_phone = q_obj.phone
-            if not customer_email:
-                customer_email = q_obj.email
-            if not customer_address:
-                customer_address = q_obj.address
+
+    if q_obj:
+        quotation_id = q_obj.id
+        quotation_no = q_obj.quotation_no
+        if not customer_name:
+            customer_name = q_obj.customer_name
+        if not customer_phone:
+            customer_phone = q_obj.phone
+        if not customer_email:
+            customer_email = q_obj.email
+        if not customer_address:
+            customer_address = q_obj.address
+    else:
+        quotation_id = int(quotation_id_val) if quotation_id_val and str(quotation_id_val).isdigit() else None
+
+    if not customer_name:
+        raise HTTPException(status_code=400, detail="Customer name is required")
 
     # Payment proof
     proof_path = str(payload.get("payment_proof") or "").strip() or None

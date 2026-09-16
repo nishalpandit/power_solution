@@ -56,8 +56,10 @@ response :-
 
 ## 3. Create / Add Payment
 
-url : (http://192.168.1.59:8000/api/payments)
+url : (http://192.168.1.59:8000/api/payments/add)
 method : POST
+
+*(Also supports `http://192.168.1.59:8000/api/payment/add` and `http://192.168.1.59:8000/api/payments`)*
 
 params :- 
 
