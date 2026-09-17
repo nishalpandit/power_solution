@@ -1581,6 +1581,57 @@ response :-
 - **Params:** `(None)`
 - **Response:** List of purchase orders with summary counts and totals.
 
+---
+
+## 15. Invoice APIs (Create Invoice Screen)
+
+> **Full Documentation:** See [INVOICE_API_DOCUMENTATION.md](file:///c:/Users/PC/Desktop/power_solution/INVOICE_API_DOCUMENTATION.md) for complete details, request examples, and response schemas matching the Create Invoice screen.
+
+### 15.1 Auto-Generate Next Invoice Number
+- **URL:** `http://192.168.1.59:8000/api/invoices/next-invoice-number`
+- **Method:** `GET`
+- **Response:** `{"invoice_no": "INV-260912-0001"}`
+
+### 15.2 Order Dropdown (Auto-fills Customer Details & Items)
+- **URL:** `http://192.168.1.59:8000/api/invoices/orders`
+- **Method:** `GET`
+- **Response:** Orders formatted to auto-fill Customer Details, Address, Items with specifications, and totals.
+
+### 15.3 Customer List (Select Customer Modal)
+- **URL:** `http://192.168.1.59:8000/api/invoices/customers`
+- **Method:** `GET`
+- **Response:** Customer list with phone, email, billing address, and latest order link.
+
+### 15.4 Create Invoice
+- **URL:** `http://192.168.1.59:8000/api/invoices/create` *(also supports `/api/invoices` and `/api/invoices/add`)*
+- **Method:** `POST`
+- **Params:** `invoice_no`, `invoice_date`, `due_date`, `order_no`, `payment_terms`, `reference_no`, `customer_name`, `phone`, `email`, `billing_address`, `delivery_address`, `items`, `subtotal`, `discount`, `tax`, `tax_percent`, `grand_total`, `notes`, `status`
+- **Response:** Created invoice object with complete financial breakdown.
+
+### 15.5 List All Invoices
+- **URL:** `http://192.168.1.59:8000/api/invoices`
+- **Method:** `GET`
+- **Filters:** `search`, `customer_name`, `status`, `order_no`, `payment_terms`
+- **Response:** Reverse-chronological list of invoices with total count.
+
+### 15.6 Single Invoice Details
+- **URL:** `http://192.168.1.59:8000/api/invoices/{invoice_id}` *(supports ID or invoice_no e.g. `INV-260912-0001`)*
+- **Method:** `GET`
+
+### 15.7 Update Invoice
+- **URL:** `http://192.168.1.59:8000/api/invoices/{invoice_id}`
+- **Method:** `PUT` / `PATCH`
+
+### 15.8 Quick Status Update
+- **URL:** `http://192.168.1.59:8000/api/invoices/{invoice_id}/status`
+- **Method:** `PATCH`
+- **Params:** `{"status": "Paid"}`
+
+### 15.9 Delete Invoice
+- **URL:** `http://192.168.1.59:8000/api/invoices/{invoice_id}`
+- **Method:** `DELETE`
+
+
 
 
 

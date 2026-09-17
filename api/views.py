@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Reques
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
-from api.models import Category, CashBill, Order, Payment, Product, PurchaseOrder, Quotation, StockIn, Supplier, User
+from api.models import Category, CashBill, Invoice, Order, Payment, Product, PurchaseOrder, Quotation, StockIn, Supplier, User
 from api.schemas import (
     AdminLoginRequest,
     CashBillCalculateRequest,
@@ -51,7 +51,7 @@ from api.schemas import (
     UserLoginRequest,
     UserRegisterRequest,
 )
-from core.auth import create_access_token, hash_password, require_admin, verify_password
+from core.auth import create_access_token, get_current_user, hash_password, require_admin, verify_password
 from core.settings import get_db
 
 router = APIRouter()
@@ -1691,33 +1691,114 @@ def save_payment_proof(file: UploadFile) -> str:
 
 
 def format_payment_response(payment: Payment) -> dict:
+    mode = payment.payment_mode or "Cash"
+    mode_lower = mode.lower()
+    if "upi" in mode_lower or "wallet" in mode_lower:
+        method_icon = "wallet"
+    elif any(k in mode_lower for k in ["bank", "neft", "rtgs", "transfer"]):
+        method_icon = "bank"
+    elif "card" in mode_lower:
+        method_icon = "card"
+    else:
+        method_icon = "cash"
+
+    st_raw = (payment.status or "Paid").strip()
+    st_lower = st_raw.lower()
+    if any(k in st_lower for k in ["paid", "received", "success", "completed"]):
+        status_text = "Paid"
+        status_color = "green"
+    elif "partial" in st_lower:
+        status_text = "Partial"
+        status_color = "orange"
+    else:
+        status_text = "Pending"
+        status_color = "red"
+
+    amt = float(payment.amount_received or 0.0)
+    pay_id = payment.payment_no or f"PAY-{payment.id:06d}"
+    inv_desc = payment.invoice_desc or (f"Invoice - {payment.category}" if payment.category else "Invoice")
+
     return {
         "id": payment.id,
+        "payment_id": pay_id,
+        "payment_no": pay_id,
+        "method": mode,
+        "payment_mode": mode,
+        "method_icon": method_icon,
         "invoice_no": payment.invoice_no,
         "order_no": payment.invoice_no,
+        "invoice_id": payment.invoice_id,
+        "invoice_desc": inv_desc,
+        "category": payment.category or "",
+        "amount": amt,
+        "amount_received": amt,
+        "formatted_amount": format_currency_inr(amt),
+        "date": payment.payment_date,
+        "payment_date": payment.payment_date,
+        "time": payment.payment_time or "10:30 AM",
+        "payment_time": payment.payment_time or "10:30 AM",
+        "status": status_text,
+        "status_color": status_color,
         "customer_name": payment.customer_name,
         "customer_phone": payment.customer_phone,
         "customer_email": payment.customer_email,
         "customer_address": payment.customer_address,
         "quotation_id": payment.quotation_id,
         "quotation_no": payment.quotation_no,
-        "payment_date": payment.payment_date,
-        "amount_received": payment.amount_received,
-        "payment_mode": payment.payment_mode,
-        "transaction_no": payment.transaction_no,
-        "reference_no": payment.reference_no,
-        "notes": payment.notes,
-        "payment_proof": payment.payment_proof,
-        "status": payment.status,
+        "transaction_no": payment.transaction_no or "",
+        "reference_no": payment.reference_no or "",
+        "notes": payment.notes or "",
+        "payment_proof": payment.payment_proof or "",
+        "user_id": payment.user_id,
         "created_at": payment.created_at.isoformat() if payment.created_at else None,
         "updated_at": payment.updated_at.isoformat() if payment.updated_at else None,
     }
+
+
+def generate_payment_no(db: Session) -> str:
+    from datetime import datetime
+    date_str = datetime.now().strftime("%y%m%d")
+    prefix = f"PAY-{date_str}-"
+
+    max_seq = 0
+    last_p = (
+        db.query(Payment)
+        .filter(Payment.payment_no.like(f"{prefix}%"))
+        .order_by(Payment.id.desc())
+        .first()
+    )
+    if last_p and last_p.payment_no:
+        try:
+            max_seq = max(max_seq, int(last_p.payment_no.split("-")[-1]))
+        except Exception:
+            pass
+
+    new_seq = max_seq + 1
+    while db.query(Payment).filter(Payment.payment_no == f"{prefix}{new_seq:03d}").first():
+        new_seq += 1
+
+    return f"{prefix}{new_seq:03d}"
 
 
 def generate_invoice_no(db: Session) -> str:
     from datetime import datetime
     date_str = datetime.now().strftime("%y%m%d")
     prefix = f"INV-{date_str}-"
+
+    # Find highest sequence across both invoices and payments
+    max_seq = 0
+    last_inv = (
+        db.query(Invoice)
+        .filter(Invoice.invoice_no.like(f"{prefix}%"))
+        .order_by(Invoice.id.desc())
+        .first()
+    )
+    if last_inv and last_inv.invoice_no:
+        try:
+            max_seq = max(max_seq, int(last_inv.invoice_no.split("-")[-1]))
+        except Exception:
+            pass
+
     last_p = (
         db.query(Payment)
         .filter(Payment.invoice_no.like(f"{prefix}%"))
@@ -1726,14 +1807,16 @@ def generate_invoice_no(db: Session) -> str:
     )
     if last_p and last_p.invoice_no:
         try:
-            last_seq = int(last_p.invoice_no.split("-")[-1])
-            new_seq = last_seq + 1
+            max_seq = max(max_seq, int(last_p.invoice_no.split("-")[-1]))
         except Exception:
-            new_seq = 1
-    else:
-        new_seq = 1
+            pass
 
-    while db.query(Payment).filter(Payment.invoice_no == f"{prefix}{new_seq:04d}").first():
+    new_seq = max_seq + 1
+
+    while (
+        db.query(Invoice).filter(Invoice.invoice_no == f"{prefix}{new_seq:04d}").first()
+        or db.query(Payment).filter(Payment.invoice_no == f"{prefix}{new_seq:04d}").first()
+    ):
         new_seq += 1
 
     return f"{prefix}{new_seq:04d}"
@@ -1959,11 +2042,164 @@ def list_payments(
     }
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# User Payment Dashboard API (For UserPaymentDashboardScreen in Flutter)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/payments/dashboard")
+@router.get("/payments/user-dashboard")
+def get_user_payment_dashboard(
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    payment_mode: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Dedicated endpoint for UserPaymentDashboardScreen in Flutter:
+    Bearer token is COMPULSORY (Authorization: Bearer <token>).
+    Strictly calculates summary analytics cards and returns payment transactions ONLY for the authenticated user.
+    """
+    query = db.query(Payment)
+
+    # 1. Strictly isolate to the authenticated user
+    clean_phone = "".join(ch for ch in (current_user.phone_number or "") if ch.isdigit())
+    user_filters = [Payment.user_id == current_user.id]
+    legacy_conditions = []
+    if current_user.email:
+        legacy_conditions.append(Payment.customer_email.ilike(current_user.email.strip()))
+    if clean_phone and len(clean_phone) >= 10:
+        legacy_conditions.append(Payment.customer_phone.like(f"%{clean_phone[-10:]}%"))
+    if legacy_conditions:
+        user_filters.append(and_(Payment.user_id.is_(None), or_(*legacy_conditions)))
+
+    query = query.filter(or_(*user_filters))
+
+    # 2. General Filters (Status, Payment Mode, Category)
+    if status:
+        st = status.strip().lower()
+        if st == "paid":
+            query = query.filter(or_(Payment.status.ilike("Paid"), Payment.status.ilike("Received"), Payment.status.ilike("Success"), Payment.status.ilike("Completed")))
+        elif st == "partial":
+            query = query.filter(Payment.status.ilike("%Partial%"))
+        elif st == "pending":
+            query = query.filter(or_(Payment.status.ilike("%Pending%"), Payment.status.ilike("%Failed%"), Payment.status.ilike("%Unpaid%")))
+        else:
+            query = query.filter(Payment.status.ilike(f"%{status.strip()}%"))
+
+    if payment_mode:
+        query = query.filter(Payment.payment_mode.ilike(f"%{payment_mode.strip()}%"))
+
+    if category:
+        query = query.filter(or_(Payment.category.ilike(f"%{category.strip()}%"), Payment.invoice_desc.ilike(f"%{category.strip()}%")))
+
+    # 3. Global Search (Search within this user's payments)
+    if search:
+        pat = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                Payment.payment_no.ilike(pat),
+                Payment.invoice_no.ilike(pat),
+                Payment.transaction_no.ilike(pat),
+                Payment.reference_no.ilike(pat),
+                Payment.invoice_desc.ilike(pat),
+                Payment.category.ilike(pat),
+                Payment.payment_mode.ilike(pat),
+                Payment.status.ilike(pat),
+                Payment.payment_date.ilike(pat),
+            )
+        )
+
+    all_payments = query.order_by(Payment.id.desc()).all()
+
+    # Compute Summary Analytics Cards ONLY for this user's payments
+    total_count = len(all_payments)
+    total_amount = sum(float(p.amount_received or 0.0) for p in all_payments)
+
+    paid_count = sum(1 for p in all_payments if (p.status or "").lower() in ["paid", "received", "success", "completed"])
+    paid_amount = sum(float(p.amount_received or 0.0) for p in all_payments if (p.status or "").lower() in ["paid", "received", "success", "completed"])
+
+    partial_count = sum(1 for p in all_payments if "partial" in (p.status or "").lower())
+    partial_amount = sum(float(p.amount_received or 0.0) for p in all_payments if "partial" in (p.status or "").lower())
+
+    pending_count = sum(1 for p in all_payments if "pending" in (p.status or "").lower() or (p.status or "").lower() in ["failed", "unpaid"])
+    pending_amount = sum(float(p.amount_received or 0.0) for p in all_payments if "pending" in (p.status or "").lower() or (p.status or "").lower() in ["failed", "unpaid"])
+
+    formatted_payments = [format_payment_response(p) for p in all_payments]
+
+    return {
+        "summary": {
+            "total_payments": {
+                "title": "Total Payments",
+                "count": str(total_count),
+                "amount": total_amount,
+                "formatted_amount": format_currency_inr(total_amount),
+            },
+            "paid": {
+                "title": "Paid",
+                "count": str(paid_count),
+                "amount": paid_amount,
+                "formatted_amount": format_currency_inr(paid_amount),
+            },
+            "partial": {
+                "title": "Partial",
+                "count": str(partial_count),
+                "amount": partial_amount,
+                "formatted_amount": format_currency_inr(partial_amount),
+            },
+            "pending": {
+                "title": "Pending",
+                "count": str(pending_count),
+                "amount": pending_amount,
+                "formatted_amount": format_currency_inr(pending_amount),
+            },
+        },
+        "payments": formatted_payments,
+        "count": total_count,
+    }
+
+
 @router.get("/payments/{payment_id}")
-def get_payment(payment_id: int, db: Session = Depends(get_db)):
-    payment = db.query(Payment).filter(Payment.id == payment_id).first()
+def get_payment(
+    payment_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieves full details of a single payment by ID or payment_no.
+    Bearer token is compulsory.
+    Regular users can only view their own payments; admins can view any.
+    """
+    payment = None
+    if payment_id.isdigit():
+        payment = db.query(Payment).filter(Payment.id == int(payment_id)).first()
+    if not payment:
+        payment = db.query(Payment).filter(Payment.payment_no == payment_id.strip()).first()
+    if not payment:
+        payment = db.query(Payment).filter(Payment.invoice_no == payment_id.strip()).first()
+    if not payment:
+        payment = db.query(Payment).filter(Payment.transaction_no == payment_id.strip()).first()
+
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
+
+    if getattr(current_user, "role", "") != "admin":
+        clean_phone = "".join(ch for ch in (current_user.phone_number or "") if ch.isdigit())
+        user_name = (current_user.full_name or "").strip().lower()
+        p_name = (payment.customer_name or "").strip().lower()
+        user_email = (current_user.email or "").strip().lower()
+        p_email = (payment.customer_email or "").strip().lower()
+
+        belongs = (
+            payment.user_id == current_user.id
+            or (user_name and user_name == p_name)
+            or (user_email and user_email == p_email)
+            or (clean_phone and clean_phone[-10:] in (payment.customer_phone or ""))
+        )
+        if not belongs:
+            raise HTTPException(status_code=403, detail="You do not have permission to view this payment")
+
     return format_payment_response(payment)
 
 
@@ -5048,6 +5284,1126 @@ def delete_stock_in(stock_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": f"Stock In '{receipt_num}' deleted successfully. Reverted {qty_to_revert} units from inventory."}
+
+
+# ==============================================================================
+# SECTION 12: INVOICE MANAGEMENT APIS (Create Invoice Screen)
+# ==============================================================================
+
+def compute_due_date(invoice_date_str: str, payment_terms: str) -> str:
+    """Calculates due date based on invoice date and payment terms."""
+    from datetime import datetime, timedelta
+    dt = None
+    for fmt in ("%d %b %Y", "%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
+        try:
+            dt = datetime.strptime(invoice_date_str.strip(), fmt)
+            break
+        except Exception:
+            pass
+    if not dt:
+        dt = datetime.now()
+
+    terms_lower = (payment_terms or "").lower()
+    days = 30
+    if "15" in terms_lower:
+        days = 15
+    elif "45" in terms_lower:
+        days = 45
+    elif "60" in terms_lower:
+        days = 60
+    elif "90" in terms_lower:
+        days = 90
+    elif "due on receipt" in terms_lower or "immediate" in terms_lower:
+        days = 0
+
+    due_dt = dt + timedelta(days=days)
+    return due_dt.strftime("%d %b %Y")
+
+
+def format_currency_inr(value: float) -> str:
+    """Formats a float as Indian Rupee string: e.g. 125600.0 -> 'Rs 1,25,600.00'."""
+    try:
+        val = round(float(value), 2)
+        s = f"{val:.2f}"
+        int_part, dec_part = s.split(".")
+        if len(int_part) > 3:
+            last_three = int_part[-3:]
+            rest = int_part[:-3]
+            groups = []
+            while len(rest) > 2:
+                groups.insert(0, rest[-2:])
+                rest = rest[:-2]
+            if rest:
+                groups.insert(0, rest)
+            groups.append(last_three)
+            int_formatted = ",".join(groups)
+        else:
+            int_formatted = int_part
+        return f"Rs {int_formatted}.{dec_part}"
+    except Exception:
+        return f"Rs {value:.2f}"
+
+
+def format_invoice_response(invoice: Invoice) -> dict:
+    """Standardized dictionary representation of an invoice matching Flutter Invoice Dashboard Screen."""
+    status_val = invoice.status or "Unpaid"
+    status_color = "red"
+    if status_val.lower() == "paid":
+        status_color = "green"
+    elif "partial" in status_val.lower():
+        status_color = "orange"
+
+    category_val = getattr(invoice, "category", None) or "Lift"
+    if not category_val and invoice.items and len(invoice.items) > 0 and isinstance(invoice.items[0], dict):
+        category_val = invoice.items[0].get("category") or "Lift"
+
+    inv_type = getattr(invoice, "invoice_type", None) or "Sales"
+    if invoice.invoice_no and invoice.invoice_no.upper().startswith("SV-"):
+        inv_type = "Service"
+
+    amt = float(invoice.grand_total or 0.0)
+
+    return {
+        "id": invoice.id,
+        "invoice_no": invoice.invoice_no,
+        "category": category_val,
+        "invoice_type": inv_type,
+        "invoice_date": invoice.invoice_date,
+        "date": invoice.invoice_date,
+        "due_date": invoice.due_date or "",
+        "due": invoice.due_date or "",
+        "amount": amt,
+        "formatted_amount": format_currency_inr(amt),
+        "status": status_val,
+        "status_color": status_color,
+        "user_id": invoice.user_id,
+        "order_id": invoice.order_id,
+        "order_no": invoice.order_no,
+        "quotation_id": invoice.quotation_id,
+        "quotation_no": invoice.quotation_no,
+        "customer_name": invoice.customer_name,
+        "phone": invoice.phone or "",
+        "email": invoice.email or "",
+        "billing_address": invoice.billing_address or "",
+        "delivery_address": invoice.delivery_address or "",
+        "customer": {
+            "name": invoice.customer_name,
+            "phone": invoice.phone or "",
+            "email": invoice.email or "",
+            "billing_address": invoice.billing_address or "",
+            "delivery_address": invoice.delivery_address or "",
+        },
+        "payment_terms": invoice.payment_terms or "30 Days",
+        "reference_no": invoice.reference_no or "",
+        "items": invoice.items or [],
+        "subtotal": float(invoice.subtotal or 0.0),
+        "discount": float(invoice.discount or 0.0),
+        "tax_percent": float(invoice.tax_percent or 18.0),
+        "tax": float(invoice.tax or 0.0),
+        "grand_total": amt,
+        "amount_paid": float(invoice.amount_paid or 0.0),
+        "balance_due": float(invoice.balance_due or 0.0),
+        "notes": invoice.notes or "",
+        "created_at": invoice.created_at.isoformat() if invoice.created_at else None,
+        "updated_at": invoice.updated_at.isoformat() if invoice.updated_at else None,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 0. Single Screen Data Endpoint (Initial Screen Bootstrap)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/invoices/create-data")
+@router.get("/invoices/create-screen-data")
+@router.get("/invoices/meta")
+def get_create_invoice_screen_data(db: Session = Depends(get_db)):
+    """
+    SINGLE UNIFIED API FOR THE CREATE INVOICE SCREEN:
+    Returns everything needed to render the Create Invoice screen in 1 single HTTP request:
+    - invoice_no (next auto-generated)
+    - invoice_date (today's date)
+    - due_date (default 30 days)
+    - payment_terms & payment_terms_options dropdown
+    - orders dropdown list (with items and customer details for 1-tap auto-fill)
+    - customers list (for [Select Customer] modal)
+    - default_tax_percent
+    """
+    from datetime import datetime, timedelta
+
+    inv_no = generate_invoice_no(db)
+    today = datetime.now()
+    invoice_date = today.strftime("%d %b %Y")
+    due_date = (today + timedelta(days=30)).strftime("%d %b %Y")
+
+    orders = db.query(Order).order_by(Order.id.desc()).all()
+    orders_list = []
+    for ord_obj in orders:
+        formatted_items = []
+        for idx, it in enumerate(ord_obj.items or []):
+            if isinstance(it, dict):
+                qty = float(it.get("qty") or it.get("quantity") or 1)
+                rate = float(it.get("rate") or it.get("price") or it.get("unit_price") or 0.0)
+                disc = float(it.get("discount") or 0.0)
+                tax_pct = float(it.get("tax_percent") or it.get("tax") or 18.0)
+                tot = float(it.get("total") or it.get("total_price") or (qty * rate))
+                formatted_items.append({
+                    "id": it.get("id") or it.get("product") or f"ITEM{idx+1:03d}",
+                    "name": it.get("name") or it.get("product_name") or "Product",
+                    "code": it.get("code") or it.get("product_code") or it.get("id") or "",
+                    "category": it.get("category") or "",
+                    "qty": qty,
+                    "rate": rate,
+                    "discount": disc,
+                    "tax": tax_pct,
+                    "tax_percent": tax_pct,
+                    "total": tot,
+                    "specifications": it.get("specifications") or {},
+                })
+
+        orders_list.append({
+            "id": ord_obj.id,
+            "order_id": ord_obj.id,
+            "order_no": ord_obj.order_no,
+            "quotation_id": ord_obj.quotation_id,
+            "quotation_no": ord_obj.quotation_no,
+            "order_date": ord_obj.order_date,
+            "customer_name": ord_obj.customer_name,
+            "phone": ord_obj.mobile or "",
+            "email": ord_obj.email or "",
+            "billing_address": ord_obj.billing_address or "",
+            "delivery_address": ord_obj.delivery_address or "",
+            "items": formatted_items,
+            "subtotal": float(ord_obj.subtotal or 0.0),
+            "discount": float(ord_obj.discount or 0.0),
+            "tax": float(ord_obj.tax or 0.0),
+            "grand_total": float(ord_obj.grand_total or 0.0),
+            "payment_terms": "30 Days",
+            "status": ord_obj.order_status,
+        })
+
+    customers_map = {}
+    for ord_obj in orders:
+        name = (ord_obj.customer_name or "").strip()
+        if not name:
+            continue
+        key = name.lower()
+        if key not in customers_map:
+            customers_map[key] = {
+                "customer_name": name,
+                "phone": ord_obj.mobile or "",
+                "email": ord_obj.email or "",
+                "billing_address": ord_obj.billing_address or "",
+                "delivery_address": ord_obj.delivery_address or "",
+                "latest_order_id": ord_obj.id,
+                "latest_order_no": ord_obj.order_no,
+                "orders_count": 0,
+            }
+        customers_map[key]["orders_count"] += 1
+
+    for q in db.query(Quotation).order_by(Quotation.id.desc()).all():
+        name = (q.customer_name or "").strip()
+        if not name:
+            continue
+        key = name.lower()
+        if key not in customers_map:
+            customers_map[key] = {
+                "customer_name": name,
+                "phone": q.phone or "",
+                "email": q.email or "",
+                "billing_address": q.address or "",
+                "delivery_address": q.address or "",
+                "latest_order_id": None,
+                "latest_order_no": None,
+                "orders_count": 0,
+            }
+        else:
+            if not customers_map[key]["phone"] and q.phone:
+                customers_map[key]["phone"] = q.phone
+            if not customers_map[key]["email"] and q.email:
+                customers_map[key]["email"] = q.email
+            if not customers_map[key]["billing_address"] and q.address:
+                customers_map[key]["billing_address"] = q.address
+
+    customers_list = list(customers_map.values())
+
+    return {
+        "invoice_no": inv_no,
+        "invoice_date": invoice_date,
+        "due_date": due_date,
+        "payment_terms": "30 Days",
+        "payment_terms_options": [
+            "Due on Receipt",
+            "15 Days",
+            "30 Days",
+            "45 Days",
+            "60 Days",
+            "90 Days",
+        ],
+        "default_tax_percent": 18.0,
+        "tax_rates": [0, 5, 12, 18, 28],
+        "orders": orders_list,
+        "customers": customers_list,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. Next Auto-Generated Invoice Number
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/invoices/next-invoice-number")
+@router.get("/invoices/next-number")
+def get_next_invoice_number_endpoint(db: Session = Depends(get_db)):
+    """Generate next sequential invoice number in INV-YYMMDD-XXXX format."""
+    inv_no = generate_invoice_no(db)
+    return {
+        "invoice_no": inv_no
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 2. Orders Dropdown (Auto-fills Customer Details & Items)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/invoices/orders")
+def get_invoice_orders_dropdown(
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns existing orders formatted to populate the 'Order No.' dropdown 
+    in the Create Invoice screen. Enables 1-tap autofill of Customer Details & Line Items.
+    """
+    query = db.query(Order)
+    if status:
+        query = query.filter(Order.order_status.ilike(status.strip()))
+    if search:
+        pat = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                Order.order_no.ilike(pat),
+                Order.customer_name.ilike(pat),
+                Order.mobile.ilike(pat),
+            )
+        )
+
+    orders = query.order_by(Order.id.desc()).all()
+    results = []
+    for ord_obj in orders:
+        formatted_items = []
+        for idx, it in enumerate(ord_obj.items or []):
+            if isinstance(it, dict):
+                qty = float(it.get("qty") or it.get("quantity") or 1)
+                rate = float(it.get("rate") or it.get("price") or it.get("unit_price") or 0.0)
+                disc = float(it.get("discount") or 0.0)
+                tax_pct = float(it.get("tax_percent") or it.get("tax") or 18.0)
+                tot = float(it.get("total") or it.get("total_price") or (qty * rate))
+                formatted_items.append({
+                    "id": it.get("id") or it.get("product") or f"ITEM{idx+1:03d}",
+                    "name": it.get("name") or it.get("product_name") or "Product",
+                    "code": it.get("code") or it.get("product_code") or it.get("id") or "",
+                    "category": it.get("category") or "",
+                    "qty": qty,
+                    "rate": rate,
+                    "discount": disc,
+                    "tax": tax_pct,
+                    "tax_percent": tax_pct,
+                    "total": tot,
+                    "specifications": it.get("specifications") or {},
+                })
+
+        results.append({
+            "id": ord_obj.id,
+            "order_id": ord_obj.id,
+            "order_no": ord_obj.order_no,
+            "quotation_id": ord_obj.quotation_id,
+            "quotation_no": ord_obj.quotation_no,
+            "order_date": ord_obj.order_date,
+            "customer_name": ord_obj.customer_name,
+            "phone": ord_obj.mobile or "",
+            "email": ord_obj.email or "",
+            "billing_address": ord_obj.billing_address or "",
+            "delivery_address": ord_obj.delivery_address or "",
+            "items": formatted_items,
+            "subtotal": float(ord_obj.subtotal or 0.0),
+            "discount": float(ord_obj.discount or 0.0),
+            "tax": float(ord_obj.tax or 0.0),
+            "grand_total": float(ord_obj.grand_total or 0.0),
+            "payment_terms": "30 Days",
+            "status": ord_obj.order_status,
+        })
+
+    return {
+        "count": len(results),
+        "orders": results,
+        "results": results,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 3. Customer List (Select Customer Modal)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/invoices/customers")
+def get_invoice_customers(
+    search: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns customer list for the [Select Customer] picker in Create Invoice screen.
+    Aggregates customers from Orders and Quotations with their contact information.
+    """
+    customers_map = {}
+
+    # Gather from Orders
+    for ord_obj in db.query(Order).order_by(Order.id.desc()).all():
+        name = (ord_obj.customer_name or "").strip()
+        if not name:
+            continue
+        key = name.lower()
+        if key not in customers_map:
+            customers_map[key] = {
+                "customer_name": name,
+                "phone": ord_obj.mobile or "",
+                "email": ord_obj.email or "",
+                "billing_address": ord_obj.billing_address or "",
+                "delivery_address": ord_obj.delivery_address or "",
+                "latest_order_id": ord_obj.id,
+                "latest_order_no": ord_obj.order_no,
+                "orders_count": 0,
+            }
+        customers_map[key]["orders_count"] += 1
+
+    # Gather from Quotations
+    for q in db.query(Quotation).order_by(Quotation.id.desc()).all():
+        name = (q.customer_name or "").strip()
+        if not name:
+            continue
+        key = name.lower()
+        if key not in customers_map:
+            customers_map[key] = {
+                "customer_name": name,
+                "phone": q.phone or "",
+                "email": q.email or "",
+                "billing_address": q.address or "",
+                "delivery_address": q.address or "",
+                "latest_order_id": None,
+                "latest_order_no": None,
+                "orders_count": 0,
+            }
+        else:
+            if not customers_map[key]["phone"] and q.phone:
+                customers_map[key]["phone"] = q.phone
+            if not customers_map[key]["email"] and q.email:
+                customers_map[key]["email"] = q.email
+            if not customers_map[key]["billing_address"] and q.address:
+                customers_map[key]["billing_address"] = q.address
+
+    results = list(customers_map.values())
+    if search:
+        pat = search.strip().lower()
+        results = [
+            c for c in results
+            if pat in c["customer_name"].lower()
+            or pat in c["phone"].lower()
+            or pat in c["email"].lower()
+        ]
+
+    return {
+        "count": len(results),
+        "customers": results,
+        "results": results,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 4. Create Invoice
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.post("/invoices", status_code=status.HTTP_201_CREATED)
+@router.post("/invoices/create", status_code=status.HTTP_201_CREATED)
+@router.post("/invoices/add", status_code=status.HTTP_201_CREATED)
+async def create_invoice(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Creates a new Invoice record. Accepts JSON or multipart/form-data.
+    Supports auto-calculation of subtotal, tax, grand total from items if not supplied.
+    """
+    from datetime import datetime
+
+    content_type = request.headers.get("content-type", "").lower()
+    if "application/json" in content_type:
+        try:
+            payload = await request.json()
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid JSON body")
+    else:
+        try:
+            form = await request.form()
+            payload = dict(form)
+            # Parse items if passed as stringified JSON
+            if "items" in payload and isinstance(payload["items"], str):
+                try:
+                    payload["items"] = json.loads(payload["items"])
+                except Exception:
+                    payload["items"] = []
+            if "customer" in payload and isinstance(payload["customer"], str):
+                try:
+                    payload["customer"] = json.loads(payload["customer"])
+                except Exception:
+                    payload["customer"] = {}
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid form data")
+
+    # 1. Invoice Number
+    invoice_no = str(payload.get("invoice_no") or "").strip()
+    if not invoice_no:
+        invoice_no = generate_invoice_no(db)
+    else:
+        existing = db.query(Invoice).filter(Invoice.invoice_no == invoice_no).first()
+        if existing:
+            invoice_no = generate_invoice_no(db)
+
+    # 2. Date & Terms
+    invoice_date = str(payload.get("invoice_date") or datetime.now().strftime("%d %b %Y")).strip()
+    payment_terms = str(payload.get("payment_terms") or "30 Days").strip()
+    due_date = str(payload.get("due_date") or "").strip()
+    if not due_date:
+        due_date = compute_due_date(invoice_date, payment_terms)
+
+    reference_no = str(payload.get("reference_no") or "").strip() or None
+
+    # 3. Order linkage
+    order_id_val = payload.get("order_id")
+    order_no_val = str(payload.get("order_no") or "").strip()
+    ord_obj = None
+
+    if order_id_val is not None and str(order_id_val).isdigit():
+        ord_obj = db.query(Order).filter(Order.id == int(order_id_val)).first()
+    elif order_no_val:
+        ord_obj = db.query(Order).filter(Order.order_no == order_no_val).first()
+
+    order_id = ord_obj.id if ord_obj else None
+    order_no = ord_obj.order_no if ord_obj else (order_no_val or None)
+    quotation_id = ord_obj.quotation_id if ord_obj else payload.get("quotation_id")
+    quotation_no = ord_obj.quotation_no if ord_obj else payload.get("quotation_no")
+
+    # 4. Customer details
+    cust_data = payload.get("customer") if isinstance(payload.get("customer"), dict) else {}
+    customer_name = str(
+        payload.get("customer_name")
+        or cust_data.get("name")
+        or (ord_obj.customer_name if ord_obj else "")
+    ).strip()
+
+    if not customer_name:
+        raise HTTPException(status_code=422, detail="Customer Name is required")
+
+    phone = str(
+        payload.get("phone")
+        or payload.get("mobile")
+        or cust_data.get("phone")
+        or cust_data.get("mobile")
+        or (ord_obj.mobile if ord_obj else "")
+    ).strip() or None
+
+    email = str(
+        payload.get("email")
+        or cust_data.get("email")
+        or (ord_obj.email if ord_obj else "")
+    ).strip() or None
+
+    billing_address = str(
+        payload.get("billing_address")
+        or payload.get("address")
+        or cust_data.get("billing_address")
+        or cust_data.get("address")
+        or (ord_obj.billing_address if ord_obj else "")
+    ).strip() or None
+
+    delivery_address = str(
+        payload.get("delivery_address")
+        or cust_data.get("delivery_address")
+        or (ord_obj.delivery_address if ord_obj else "")
+        or billing_address
+        or ""
+    ).strip() or None
+
+    # 5. Items
+    items = payload.get("items")
+    if not items and ord_obj and ord_obj.items:
+        items = ord_obj.items
+    elif not items:
+        items = []
+
+    # Clean & format items
+    formatted_items = []
+    items_subtotal = 0.0
+    items_discount = 0.0
+
+    for idx, it in enumerate(items):
+        if isinstance(it, dict):
+            qty = float(it.get("qty") or it.get("quantity") or 1)
+            rate = float(it.get("rate") or it.get("price") or it.get("unit_price") or 0.0)
+            disc = float(it.get("discount") or 0.0)
+            tax_pct = float(it.get("tax_percent") or it.get("tax") or 18.0)
+            line_tot = float(it.get("total") or it.get("total_price") or (qty * rate))
+
+            items_subtotal += (qty * rate)
+            items_discount += disc
+
+            formatted_items.append({
+                "id": it.get("id") or f"ITEM{idx+1:03d}",
+                "name": str(it.get("name") or it.get("product_name") or f"Item {idx+1}").strip(),
+                "code": str(it.get("code") or it.get("product_code") or "").strip(),
+                "category": str(it.get("category") or "").strip(),
+                "qty": qty,
+                "rate": rate,
+                "discount": disc,
+                "tax_percent": tax_pct,
+                "tax": float(it.get("tax_amount") or round((max(0.0, (qty * rate) - disc)) * (tax_pct / 100.0), 2)),
+                "total": line_tot,
+                "specifications": it.get("specifications") or {},
+            })
+
+    # 6. Pricing calculations
+    subtotal = float(payload.get("subtotal") if payload.get("subtotal") is not None else items_subtotal)
+    discount = float(payload.get("discount") if payload.get("discount") is not None else items_discount)
+    tax_percent = float(payload.get("tax_percent") if payload.get("tax_percent") is not None else 18.0)
+    taxable = max(0.0, subtotal - discount)
+
+    if payload.get("tax") is not None:
+        tax = float(payload.get("tax"))
+    else:
+        tax = round(taxable * (tax_percent / 100.0), 2)
+
+    if payload.get("grand_total") is not None:
+        grand_total = float(payload.get("grand_total"))
+    else:
+        grand_total = round(taxable + tax, 2)
+
+    amount_paid = float(payload.get("amount_paid") or 0.0)
+    balance_due = float(payload.get("balance_due") if payload.get("balance_due") is not None else max(0.0, grand_total - amount_paid))
+
+    # 7. Status & Notes
+    status_val = str(payload.get("status") or "").strip().capitalize()
+    if not status_val:
+        if amount_paid >= grand_total and grand_total > 0:
+            status_val = "Paid"
+        elif amount_paid > 0:
+            status_val = "Partially Paid"
+        else:
+            status_val = "Unpaid"
+
+    notes = str(payload.get("notes") or "").strip() or None
+
+    first_item_cat = formatted_items[0].get("category") if formatted_items else "Lift"
+    category_val = str(payload.get("category") or first_item_cat or "Lift").strip()
+    inv_type_val = str(payload.get("invoice_type") or payload.get("type") or "").strip().capitalize()
+    if not inv_type_val:
+        if invoice_no.upper().startswith("SV-") or "service" in category_val.lower():
+            inv_type_val = "Service"
+        else:
+            inv_type_val = "Sales"
+
+    # Match user account to associate invoice with specific user
+    user_id_val = payload.get("user_id")
+    matched_user = None
+    if user_id_val and str(user_id_val).isdigit():
+        matched_user = db.query(User).filter(User.id == int(user_id_val)).first()
+    if not matched_user and email:
+        matched_user = db.query(User).filter(User.email.ilike(email.strip())).first()
+    if not matched_user and phone:
+        clean_p = "".join(ch for ch in phone if ch.isdigit())
+        if clean_p:
+            matched_user = db.query(User).filter(User.phone_number.like(f"%{clean_p[-10:]}%")).first()
+    if not matched_user and customer_name:
+        matched_user = db.query(User).filter(User.full_name.ilike(customer_name.strip())).first()
+
+    matched_user_id = matched_user.id if matched_user else (int(user_id_val) if user_id_val and str(user_id_val).isdigit() else None)
+
+    invoice = Invoice(
+        invoice_no=invoice_no,
+        invoice_date=invoice_date,
+        due_date=due_date,
+        order_id=order_id,
+        order_no=order_no,
+        quotation_id=quotation_id,
+        quotation_no=quotation_no,
+        user_id=matched_user_id,
+        customer_name=customer_name,
+        phone=phone,
+        email=email,
+        billing_address=billing_address,
+        delivery_address=delivery_address,
+        payment_terms=payment_terms,
+        reference_no=reference_no,
+        category=category_val,
+        invoice_type=inv_type_val,
+        items=formatted_items,
+        subtotal=subtotal,
+        discount=discount,
+        tax_percent=tax_percent,
+        tax=tax,
+        grand_total=grand_total,
+        amount_paid=amount_paid,
+        balance_due=balance_due,
+        notes=notes,
+        status=status_val,
+    )
+
+    db.add(invoice)
+    db.commit()
+    db.refresh(invoice)
+
+    return {
+        "message": f"Invoice '{invoice.invoice_no}' created successfully",
+        "invoice": format_invoice_response(invoice),
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 5. List Invoices
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/invoices")
+def list_invoices(
+    search: Optional[str] = Query(None),
+    customer_name: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    order_no: Optional[str] = Query(None),
+    payment_terms: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns list of invoices in reverse chronological order with optional filtering.
+    """
+    query = db.query(Invoice)
+
+    if customer_name:
+        query = query.filter(Invoice.customer_name.ilike(f"%{customer_name.strip()}%"))
+
+    if status:
+        query = query.filter(Invoice.status.ilike(status.strip()))
+
+    if order_no:
+        query = query.filter(Invoice.order_no.ilike(f"%{order_no.strip()}%"))
+
+    if payment_terms:
+        query = query.filter(Invoice.payment_terms.ilike(f"%{payment_terms.strip()}%"))
+
+    if search:
+        pat = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                Invoice.invoice_no.ilike(pat),
+                Invoice.customer_name.ilike(pat),
+                Invoice.order_no.ilike(pat),
+                Invoice.reference_no.ilike(pat),
+                Invoice.phone.ilike(pat),
+            )
+        )
+
+    invoices = query.order_by(Invoice.id.desc()).all()
+    results = [format_invoice_response(inv) for inv in invoices]
+
+    return {
+        "count": len(results),
+        "invoices": results,
+        "results": results,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 6. User Invoice Dashboard API (For UserInvoiceDashboardScreen in Flutter)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/invoices/dashboard")
+@router.get("/invoices/user-dashboard")
+def get_user_invoice_dashboard(
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    invoice_type: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Dedicated endpoint for UserInvoiceDashboardScreen:
+    Bearer token is COMPULSORY (Authorization: Bearer <token>).
+    Strictly calculates summary analytics cards and returns invoices ONLY for the authenticated user.
+    """
+    query = db.query(Invoice)
+
+    # 1. Strictly isolate to the authenticated user
+    clean_phone = "".join(ch for ch in (current_user.phone_number or "") if ch.isdigit())
+    user_filters = [Invoice.user_id == current_user.id]
+    legacy_conditions = []
+    if current_user.email:
+        legacy_conditions.append(Invoice.email.ilike(current_user.email.strip()))
+    if clean_phone and len(clean_phone) >= 10:
+        legacy_conditions.append(Invoice.phone.like(f"%{clean_phone[-10:]}%"))
+    if legacy_conditions:
+        user_filters.append(and_(Invoice.user_id.is_(None), or_(*legacy_conditions)))
+
+    query = query.filter(or_(*user_filters))
+
+    # 2. General Filters (Status, Category, Invoice Type)
+    if status:
+        query = query.filter(Invoice.status.ilike(status.strip()))
+    if category:
+        query = query.filter(Invoice.category.ilike(f"%{category.strip()}%"))
+    if invoice_type:
+        query = query.filter(Invoice.invoice_type.ilike(invoice_type.strip()))
+
+    # 3. Global Search (Search within this user's invoices)
+    if search:
+        pat = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                Invoice.invoice_no.ilike(pat),
+                Invoice.category.ilike(pat),
+                Invoice.invoice_date.ilike(pat),
+                Invoice.customer_name.ilike(pat),
+                Invoice.status.ilike(pat),
+            )
+        )
+
+    all_invoices = query.order_by(Invoice.id.desc()).all()
+
+    # Compute Summary Analytics Cards ONLY for this user's invoices
+    total_count = len(all_invoices)
+    total_amount = sum(float(inv.grand_total or 0.0) for inv in all_invoices)
+
+    paid_count = sum(1 for inv in all_invoices if (inv.status or "").lower() == "paid")
+    paid_amount = sum(float(inv.grand_total or 0.0) for inv in all_invoices if (inv.status or "").lower() == "paid")
+
+    partially_paid_count = sum(1 for inv in all_invoices if "partial" in (inv.status or "").lower())
+    partially_paid_amount = sum(float(inv.grand_total or 0.0) for inv in all_invoices if "partial" in (inv.status or "").lower())
+
+    unpaid_count = sum(1 for inv in all_invoices if (inv.status or "").lower() == "unpaid")
+    unpaid_amount = sum(float(inv.grand_total or 0.0) for inv in all_invoices if (inv.status or "").lower() == "unpaid")
+
+    formatted_all = [format_invoice_response(inv) for inv in all_invoices]
+    sales_list = [inv for inv in formatted_all if inv["invoice_type"].lower() == "sales"]
+    service_list = [inv for inv in formatted_all if inv["invoice_type"].lower() == "service"]
+
+    return {
+        "summary": {
+            "total_invoices": {
+                "title": "Total Invoice",
+                "count": str(total_count),
+                "amount": total_amount,
+                "formatted_amount": format_currency_inr(total_amount),
+            },
+            "paid": {
+                "title": "Paid",
+                "count": str(paid_count),
+                "amount": paid_amount,
+                "formatted_amount": format_currency_inr(paid_amount),
+            },
+            "partially_paid": {
+                "title": "Partially Paid",
+                "count": str(partially_paid_count),
+                "amount": partially_paid_amount,
+                "formatted_amount": format_currency_inr(partially_paid_amount),
+            },
+            "unpaid": {
+                "title": "Unpaid",
+                "count": str(unpaid_count),
+                "amount": unpaid_amount,
+                "formatted_amount": format_currency_inr(unpaid_amount),
+            },
+        },
+        "sales_invoices": sales_list,
+        "service_invoices": service_list,
+        "all_invoices": formatted_all,
+        "count": total_count,
+    }
+
+
+@router.get("/invoices/sales")
+def get_sales_invoices(
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Returns Sales Invoices for Tab 2 (Sales Invoice) - strictly for authenticated user."""
+    return get_user_invoice_dashboard(
+        search=search,
+        status=status,
+        category=category,
+        invoice_type="Sales",
+        current_user=current_user,
+        db=db,
+    )
+
+
+@router.get("/invoices/service")
+def get_service_invoices(
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Returns Service Invoices for Tab 3 (Service Invoice) - strictly for authenticated user."""
+    return get_user_invoice_dashboard(
+        search=search,
+        status=status,
+        category=category,
+        invoice_type="Service",
+        current_user=current_user,
+        db=db,
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 7. Get Single Invoice Details
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/invoices/{invoice_id}")
+def get_invoice(
+    invoice_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieves full details of a single invoice by ID or by invoice_no (e.g., INV-260912-0001).
+    Bearer token is compulsory.
+    Regular users can only view their own invoice; admins can view any.
+    """
+    inv = None
+    if invoice_id.isdigit():
+        inv = db.query(Invoice).filter(Invoice.id == int(invoice_id)).first()
+    if not inv:
+        inv = db.query(Invoice).filter(Invoice.invoice_no == invoice_id.strip()).first()
+
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    # If regular user, check if invoice belongs to them
+    if getattr(current_user, "role", "") != "admin":
+        clean_phone = "".join(ch for ch in (current_user.phone_number or "") if ch.isdigit())
+        user_name = (current_user.full_name or "").strip().lower()
+        inv_name = (inv.customer_name or "").strip().lower()
+        user_email = (current_user.email or "").strip().lower()
+        inv_email = (inv.email or "").strip().lower()
+
+        belongs = (
+            inv.user_id == current_user.id
+            or (user_name and user_name == inv_name)
+            or (user_email and user_email == inv_email)
+            or (clean_phone and clean_phone[-10:] in (inv.phone or ""))
+        )
+        if not belongs:
+            raise HTTPException(status_code=403, detail="You do not have permission to view this invoice")
+
+    return format_invoice_response(inv)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 7. Update Invoice
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.put("/invoices/{invoice_id}")
+@router.patch("/invoices/{invoice_id}")
+async def update_invoice(
+    invoice_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Updates an existing invoice.
+    """
+    inv = None
+    if invoice_id.isdigit():
+        inv = db.query(Invoice).filter(Invoice.id == int(invoice_id)).first()
+    if not inv:
+        inv = db.query(Invoice).filter(Invoice.invoice_no == invoice_id.strip()).first()
+
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    try:
+        content_type = request.headers.get("content-type", "").lower()
+        if "application/json" in content_type:
+            payload = await request.json()
+        else:
+            form = await request.form()
+            payload = dict(form)
+            if "items" in payload and isinstance(payload["items"], str):
+                try:
+                    payload["items"] = json.loads(payload["items"])
+                except Exception:
+                    pass
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid payload")
+
+    if "customer_name" in payload and payload["customer_name"]:
+        inv.customer_name = str(payload["customer_name"]).strip()
+    if "phone" in payload:
+        inv.phone = str(payload["phone"] or "").strip() or None
+    if "email" in payload:
+        inv.email = str(payload["email"] or "").strip() or None
+    if "billing_address" in payload:
+        inv.billing_address = str(payload["billing_address"] or "").strip() or None
+    if "delivery_address" in payload:
+        inv.delivery_address = str(payload["delivery_address"] or "").strip() or None
+    if "invoice_date" in payload and payload["invoice_date"]:
+        inv.invoice_date = str(payload["invoice_date"]).strip()
+    if "due_date" in payload and payload["due_date"]:
+        inv.due_date = str(payload["due_date"]).strip()
+    if "payment_terms" in payload and payload["payment_terms"]:
+        inv.payment_terms = str(payload["payment_terms"]).strip()
+    if "reference_no" in payload:
+        inv.reference_no = str(payload["reference_no"] or "").strip() or None
+    if "notes" in payload:
+        inv.notes = str(payload["notes"] or "").strip() or None
+    if "status" in payload and payload["status"]:
+        inv.status = str(payload["status"]).strip().capitalize()
+
+    if "items" in payload and isinstance(payload["items"], list):
+        formatted_items = []
+        calc_subtotal = 0.0
+        calc_discount = 0.0
+        for idx, it in enumerate(payload["items"]):
+            if isinstance(it, dict):
+                qty = float(it.get("qty") or it.get("quantity") or 1)
+                rate = float(it.get("rate") or it.get("price") or 0.0)
+                disc = float(it.get("discount") or 0.0)
+                tax_pct = float(it.get("tax_percent") or 18.0)
+                tot = float(it.get("total") or (qty * rate))
+                calc_subtotal += (qty * rate)
+                calc_discount += disc
+                formatted_items.append({
+                    "id": it.get("id") or f"ITEM{idx+1:03d}",
+                    "name": str(it.get("name") or "Item").strip(),
+                    "code": str(it.get("code") or "").strip(),
+                    "category": str(it.get("category") or "").strip(),
+                    "qty": qty,
+                    "rate": rate,
+                    "discount": disc,
+                    "tax_percent": tax_pct,
+                    "tax": float(it.get("tax") or round(max(0.0, (qty * rate) - disc) * (tax_pct / 100.0), 2)),
+                    "total": tot,
+                    "specifications": it.get("specifications") or {},
+                })
+        inv.items = formatted_items
+        if "subtotal" not in payload:
+            inv.subtotal = calc_subtotal
+        if "discount" not in payload:
+            inv.discount = calc_discount
+
+    if "subtotal" in payload:
+        inv.subtotal = float(payload["subtotal"])
+    if "discount" in payload:
+        inv.discount = float(payload["discount"])
+    if "tax_percent" in payload:
+        inv.tax_percent = float(payload["tax_percent"])
+    if "tax" in payload:
+        inv.tax = float(payload["tax"])
+    elif "subtotal" in payload or "discount" in payload or "items" in payload:
+        inv.tax = round(max(0.0, inv.subtotal - inv.discount) * (inv.tax_percent / 100.0), 2)
+
+    if "grand_total" in payload:
+        inv.grand_total = float(payload["grand_total"])
+    elif "subtotal" in payload or "tax" in payload or "items" in payload:
+        inv.grand_total = round(max(0.0, inv.subtotal - inv.discount) + inv.tax, 2)
+
+    if "amount_paid" in payload:
+        inv.amount_paid = float(payload["amount_paid"])
+    if "balance_due" in payload:
+        inv.balance_due = float(payload["balance_due"])
+    else:
+        inv.balance_due = max(0.0, inv.grand_total - inv.amount_paid)
+
+    db.commit()
+    db.refresh(inv)
+
+    return {
+        "message": f"Invoice '{inv.invoice_no}' updated successfully",
+        "invoice": format_invoice_response(inv),
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 8. Quick Status Update
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.patch("/invoices/{invoice_id}/status")
+@router.put("/invoices/{invoice_id}/status")
+async def update_invoice_status(
+    invoice_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Quickly update invoice status (Unpaid, Paid, Partially Paid, Overdue, Cancelled)."""
+    inv = None
+    if invoice_id.isdigit():
+        inv = db.query(Invoice).filter(Invoice.id == int(invoice_id)).first()
+    if not inv:
+        inv = db.query(Invoice).filter(Invoice.invoice_no == invoice_id.strip()).first()
+
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    new_status = str(payload.get("status") or "").strip().capitalize()
+    if not new_status:
+        raise HTTPException(status_code=422, detail="'status' is required")
+
+    inv.status = new_status
+    if new_status == "Paid":
+        inv.amount_paid = inv.grand_total
+        inv.balance_due = 0.0
+    elif new_status == "Unpaid":
+        inv.amount_paid = 0.0
+        inv.balance_due = inv.grand_total
+
+    db.commit()
+    db.refresh(inv)
+
+    return {
+        "message": f"Invoice '{inv.invoice_no}' status updated to '{inv.status}'",
+        "invoice": format_invoice_response(inv),
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 9. Delete Invoice
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.delete("/invoices/{invoice_id}")
+def delete_invoice(invoice_id: str, db: Session = Depends(get_db)):
+    """Deletes an invoice record."""
+    inv = None
+    if invoice_id.isdigit():
+        inv = db.query(Invoice).filter(Invoice.id == int(invoice_id)).first()
+    if not inv:
+        inv = db.query(Invoice).filter(Invoice.invoice_no == invoice_id.strip()).first()
+
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    num = inv.invoice_no
+    db.delete(inv)
+    db.commit()
+
+    return {"message": f"Invoice '{num}' deleted successfully"}
+
+
+
+
+
 
 
 

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from core.settings import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, get_db
 
 # Security Scheme (Flutter mobile clients pass Authorization: Bearer <token>)
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 def hash_password(password: str) -> str:
     salt = bcrypt.gensalt()
@@ -43,10 +43,17 @@ def decode_token(token: str) -> dict:
         )
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ):
     from api.models import User  # Deferred import to avoid circular dependencies
+
+    if not credentials or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Bearer token is compulsory. Please provide Authorization: Bearer <token>",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     token = credentials.credentials
     payload = decode_token(token)

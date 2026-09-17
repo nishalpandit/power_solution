@@ -1544,6 +1544,143 @@ class StockInMetaResponse(BaseModel):
     gst_rates: List[int]
 
 
+# ── Invoice Schemas ──────────────────────────────────────────────────────────
+
+class InvoiceItemSchema(BaseModel):
+    id: Optional[str] = None
+    name: str
+    code: Optional[str] = None
+    category: Optional[str] = None
+    qty: Union[int, float] = 1
+    rate: float = 0.0
+    discount: float = 0.0
+    tax_percent: float = 18.0
+    tax: Optional[float] = None
+    total: float = 0.0
+    specifications: Optional[Dict[str, Any]] = None
+
+    model_config = {"extra": "allow"}
+
+
+class InvoiceCustomerSchema(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    mobile: Optional[str] = None
+    email: Optional[str] = None
+    billing_address: Optional[str] = None
+    address: Optional[str] = None
+
+    model_config = {"extra": "allow"}
+
+
+class InvoiceCreateRequest(BaseModel):
+    invoice_no: Optional[str] = None
+    invoice_date: Optional[str] = None
+    due_date: Optional[str] = None
+
+    order_id: Optional[Any] = None
+    order_no: Optional[str] = None
+    quotation_id: Optional[Any] = None
+    quotation_no: Optional[str] = None
+
+    # Nested or flat customer fields
+    customer: Optional[Union[InvoiceCustomerSchema, Dict[str, Any]]] = None
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    mobile: Optional[str] = None
+    email: Optional[str] = None
+    billing_address: Optional[str] = None
+    address: Optional[str] = None
+    delivery_address: Optional[str] = None
+
+    payment_terms: Optional[str] = "30 Days"
+    reference_no: Optional[str] = None
+
+    items: Optional[List[Any]] = None
+
+    subtotal: Optional[float] = None
+    discount: Optional[float] = None
+    tax_percent: Optional[float] = 18.0
+    tax: Optional[float] = None
+    grand_total: Optional[float] = None
+    amount_paid: Optional[float] = 0.0
+    balance_due: Optional[float] = None
+
+    notes: Optional[str] = None
+    status: Optional[str] = "Unpaid"
+
+    model_config = {"extra": "allow"}
+
+
+class InvoiceUpdateRequest(BaseModel):
+    invoice_no: Optional[str] = None
+    invoice_date: Optional[str] = None
+    due_date: Optional[str] = None
+    order_id: Optional[Any] = None
+    order_no: Optional[str] = None
+    quotation_id: Optional[Any] = None
+    quotation_no: Optional[str] = None
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    billing_address: Optional[str] = None
+    delivery_address: Optional[str] = None
+    payment_terms: Optional[str] = None
+    reference_no: Optional[str] = None
+    items: Optional[List[Any]] = None
+    subtotal: Optional[float] = None
+    discount: Optional[float] = None
+    tax_percent: Optional[float] = None
+    tax: Optional[float] = None
+    grand_total: Optional[float] = None
+    amount_paid: Optional[float] = None
+    balance_due: Optional[float] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None
+
+    model_config = {"extra": "allow"}
+
+
+class InvoiceStatusUpdateRequest(BaseModel):
+    status: str
+
+    model_config = {"extra": "allow"}
+
+
+class InvoiceResponse(BaseModel):
+    id: int
+    invoice_no: str
+    invoice_date: str
+    due_date: Optional[str] = None
+    order_id: Optional[int] = None
+    order_no: Optional[str] = None
+    quotation_id: Optional[int] = None
+    quotation_no: Optional[str] = None
+    customer_name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    billing_address: Optional[str] = None
+    delivery_address: Optional[str] = None
+    customer: Optional[Dict[str, Any]] = None
+    payment_terms: str
+    reference_no: Optional[str] = None
+    items: List[Any] = []
+    subtotal: float
+    discount: float
+    tax_percent: float
+    tax: float
+    grand_total: float
+    amount_paid: float
+    balance_due: float
+    notes: Optional[str] = None
+    status: str
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+    model_config = {"from_attributes": True, "extra": "allow"}
+
+
+
 
 
 

@@ -157,3 +157,35 @@ def ensure_database_schema():
                 )
                 connection.exec_driver_sql("DROP TABLE users_legacy")
                 return
+
+        # Check and migrate invoices columns
+        inv_table = connection.exec_driver_sql(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='invoices'"
+        ).fetchone()
+        if inv_table:
+            inv_cols = {col[1] for col in connection.exec_driver_sql("PRAGMA table_info(invoices)").fetchall()}
+            if "category" not in inv_cols:
+                connection.exec_driver_sql("ALTER TABLE invoices ADD COLUMN category VARCHAR(100) DEFAULT 'Lift'")
+            if "invoice_type" not in inv_cols:
+                connection.exec_driver_sql("ALTER TABLE invoices ADD COLUMN invoice_type VARCHAR(50) DEFAULT 'Sales'")
+            if "user_id" not in inv_cols:
+                connection.exec_driver_sql("ALTER TABLE invoices ADD COLUMN user_id INTEGER REFERENCES users(id)")
+
+        # Check and migrate payments columns
+        pay_table = connection.exec_driver_sql(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='payments'"
+        ).fetchone()
+        if pay_table:
+            pay_cols = {col[1] for col in connection.exec_driver_sql("PRAGMA table_info(payments)").fetchall()}
+            if "payment_no" not in pay_cols:
+                connection.exec_driver_sql("ALTER TABLE payments ADD COLUMN payment_no VARCHAR(60)")
+            if "user_id" not in pay_cols:
+                connection.exec_driver_sql("ALTER TABLE payments ADD COLUMN user_id INTEGER REFERENCES users(id)")
+            if "invoice_id" not in pay_cols:
+                connection.exec_driver_sql("ALTER TABLE payments ADD COLUMN invoice_id INTEGER REFERENCES invoices(id)")
+            if "invoice_desc" not in pay_cols:
+                connection.exec_driver_sql("ALTER TABLE payments ADD COLUMN invoice_desc VARCHAR(150)")
+            if "category" not in pay_cols:
+                connection.exec_driver_sql("ALTER TABLE payments ADD COLUMN category VARCHAR(100)")
+            if "payment_time" not in pay_cols:
+                connection.exec_driver_sql("ALTER TABLE payments ADD COLUMN payment_time VARCHAR(50)")

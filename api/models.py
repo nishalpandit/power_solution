@@ -150,7 +150,15 @@ class Payment(Base):
     __tablename__ = "payments"
 
     id = Column(Integer, primary_key=True, index=True)
-    invoice_no = Column(String(60), unique=True, index=True, nullable=False)
+    payment_no = Column(String(60), unique=True, index=True, nullable=True)  # e.g. "PAY-250517-001"
+    invoice_no = Column(String(60), index=True, nullable=False)
+    invoice_id = Column(Integer, ForeignKey("invoices.id", ondelete="SET NULL"), nullable=True, index=True)
+    invoice_desc = Column(String(150), nullable=True)  # e.g. "Sales Invoice - Lift"
+    category = Column(String(100), nullable=True)  # "Lift", "Generator", "Panel", "Earthing"
+
+    # Linked User
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+
     customer_name = Column(String(150), nullable=False, index=True)
     customer_phone = Column(String(50), nullable=True)
     customer_email = Column(String(120), nullable=True)
@@ -160,23 +168,26 @@ class Payment(Base):
     quotation_no = Column(String(60), nullable=True, index=True)
 
     payment_date = Column(String(50), nullable=False)
+    payment_time = Column(String(50), nullable=True)  # e.g. "10:30 AM"
     amount_received = Column(Float, nullable=False, default=0.0)
-    payment_mode = Column(String(50), nullable=False)  # "Cash", "Online", "Cheque", "UPI", etc.
+    payment_mode = Column(String(50), nullable=False)  # "Cash", "Online", "Cheque", "UPI", "Bank Transfer", "Card", "NEFT"
     transaction_no = Column(String(100), nullable=True)  # Transaction or Cheque no
     reference_no = Column(String(100), nullable=True)
     notes = Column(Text, nullable=True)
     payment_proof = Column(String(255), nullable=True)  # Image or PDF receipt path
-    status = Column(String(30), default="Received", nullable=False)  # "Received", "Pending", "Failed"
+    status = Column(String(30), default="Paid", nullable=False)  # "Paid", "Partial", "Pending"
 
     created_at = Column(DateTime, default=utc_now, nullable=False)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
 
     quotation = relationship("Quotation", backref="payments")
+    invoice = relationship("Invoice", backref="payments")
+    user = relationship("User", backref="payments")
 
     def __repr__(self):
         return (
-            f"<Payment id={self.id} invoice='{self.invoice_no}' customer='{self.customer_name}' "
-            f"amount={self.amount_received} mode='{self.payment_mode}' status='{self.status}'>"
+            f"<Payment id={self.id} payment_no='{self.payment_no}' invoice='{self.invoice_no}' "
+            f"customer='{self.customer_name}' amount={self.amount_received} mode='{self.payment_mode}' status='{self.status}'>"
         )
 
 
@@ -234,6 +245,68 @@ class Order(Base):
         return (
             f"<Order id={self.id} no='{self.order_no}' customer='{self.customer_name}' "
             f"total={self.grand_total} status='{self.order_status}'>"
+        )
+
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    invoice_no = Column(String(60), unique=True, index=True, nullable=False)
+    invoice_date = Column(String(50), nullable=False)
+    due_date = Column(String(50), nullable=True)
+
+    # Linked Order / Quotation
+    order_id = Column(Integer, ForeignKey("orders.id", ondelete="SET NULL"), nullable=True, index=True)
+    order_no = Column(String(60), nullable=True, index=True)
+    quotation_id = Column(Integer, ForeignKey("quotations.id", ondelete="SET NULL"), nullable=True, index=True)
+    quotation_no = Column(String(60), nullable=True, index=True)
+
+    # Linked User / Customer Account
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    # Customer Details
+    customer_name = Column(String(150), nullable=False, index=True)
+    phone = Column(String(50), nullable=True)
+    email = Column(String(120), nullable=True)
+    billing_address = Column(Text, nullable=True)
+    delivery_address = Column(Text, nullable=True)
+
+    # Terms & References
+    payment_terms = Column(String(50), default="30 Days", nullable=False)
+    reference_no = Column(String(100), nullable=True)
+
+    # Classification for Dashboard (Sales / Service, Category)
+    category = Column(String(100), default="Lift", nullable=True)  # "Lift", "Generator", "Panel", "Earthing"
+    invoice_type = Column(String(50), default="Sales", nullable=False)  # "Sales" or "Service"
+
+    # Line Items (stored as JSON array: [{id, name, code, category, qty, rate, discount, tax, total, specifications}])
+    items = Column(JSON, nullable=False, default=list)
+
+    # Pricing & Summary
+    subtotal = Column(Float, default=0.0, nullable=False)
+    discount = Column(Float, default=0.0, nullable=False)
+    tax_percent = Column(Float, default=18.0, nullable=False)
+    tax = Column(Float, default=0.0, nullable=False)
+    grand_total = Column(Float, default=0.0, nullable=False)
+    amount_paid = Column(Float, default=0.0, nullable=False)
+    balance_due = Column(Float, default=0.0, nullable=False)
+
+    # Notes & Status
+    notes = Column(Text, nullable=True)
+    status = Column(String(30), default="Unpaid", nullable=False)  # Unpaid, Paid, Partially Paid, Overdue, Draft, Cancelled
+
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    order = relationship("Order", backref="invoices")
+    quotation = relationship("Quotation", backref="invoices")
+    user = relationship("User", backref="invoices")
+
+    def __repr__(self):
+        return (
+            f"<Invoice id={self.id} no='{self.invoice_no}' customer='{self.customer_name}' "
+            f"total={self.grand_total} status='{self.status}'>"
         )
 
 
