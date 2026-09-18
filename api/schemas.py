@@ -1255,6 +1255,7 @@ class SupplierCreateRequest(BaseModel):
     email: Optional[str] = None
     address: Optional[str] = None
     gstin: Optional[str] = None
+    payment_terms: Optional[str] = "30 Days"
 
     model_config = {"extra": "allow"}
 
@@ -1270,6 +1271,7 @@ class SupplierResponse(BaseModel):
     email: Optional[str] = None
     address: Optional[str] = None
     gstin: Optional[str] = None
+    payment_terms: Optional[str] = "30 Days"
 
     model_config = {"from_attributes": True, "extra": "allow"}
 

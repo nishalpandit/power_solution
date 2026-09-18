@@ -4,9 +4,9 @@ Base URL: http://192.168.1.54:8000/api
 Database Verification: db.sqlite3 (All responses below are verified against real database records)
 
 This documentation directly corresponds to the Flutter AddPurchaseOrderScreen and AddSupplierScreen workflows:
-1. Add new supplier first via AddSupplierScreen (POST /api/purchases/suppliers) with supplier name, contact person, mobile number, email, and supplier address.
+1. Add new supplier first via AddSupplierScreen (POST /api/purchases/suppliers) with supplier name, contact person, mobile number, email, address, payment terms, and GSTIN.
 2. Select supplier from dropdown in AddPurchaseOrderScreen (GET /api/purchases/suppliers).
-3. Contact person, mobile number, email, and supplier address automatically populate into the form controllers upon selection. If custom, user can enter them manually.
+3. Contact person, mobile number, email, supplier address, and payment terms automatically populate into the form controllers upon selection. If custom, user can enter or modify them manually.
 4. Auto-generate or specify PO number, PO date, expected delivery date, payment terms, and status (Draft or Ordered).
 5. Add items from Product Master Picker (types, categories, products with specifications, price, qty, unit, gst).
 6. Live summary calculation for Sub Total, GST, and Grand Total (POST /api/purchases/calculate).
@@ -18,12 +18,18 @@ This documentation directly corresponds to the Flutter AddPurchaseOrderScreen an
 
 ## 1. Screen Initialization (Single Round-Trip for AddPurchaseOrderScreen)
 
-Loads next PO number, today date, default delivery date (7 days later), payment terms, status options, supplier dropdown list, and the entire product picker master in one single request.
+Loads next auto-generated PO number, today date, default delivery date (7 days later), payment terms, status options, supplier dropdown list with payment terms, and the complete product picker master in one single request.
 
 url : (http://192.168.1.54:8000/api/purchases/create-data)
 method : GET
 
-params :-
+(Also supports http://192.168.1.54:8000/api/purchase-orders/create-data)
+
+headers :-
+
+Content-Type: application/json
+
+parameters :-
 
 (None)
 
@@ -66,7 +72,8 @@ response :-
       "phone": "9876543210",
       "email": "sales@abcelectrical.com",
       "address": "Industrial Area, Ahmedabad, Gujarat",
-      "gstin": "24AAACP1234F1Z1"
+      "gstin": "24AAACP1234F1Z1",
+      "payment_terms": "30 Days"
     },
     {
       "id": "SUP002",
@@ -80,7 +87,8 @@ response :-
       "phone": "9988776655",
       "email": "info@xyzpower.com",
       "address": "GIDC Estate, Vadodara, Gujarat",
-      "gstin": null
+      "gstin": "24AAACB5678K1Z2",
+      "payment_terms": "30 Days"
     },
     {
       "id": "SUP003",
@@ -94,7 +102,23 @@ response :-
       "phone": "9998887776",
       "email": "purchase@powerequipment.in",
       "address": "Industrial Estate, Surat, Gujarat",
-      "gstin": null
+      "gstin": "24AAACP9012M1Z3",
+      "payment_terms": "30 Days"
+    },
+    {
+      "id": "SUP018",
+      "supplier_id": 18,
+      "supplier_code": "SUP018",
+      "name": "Omkar Elevators & Switchgears",
+      "supplier_name": "Omkar Elevators & Switchgears",
+      "contact": "Suresh Mehta",
+      "contact_person": "Suresh Mehta",
+      "mobile": "9822114455",
+      "phone": "9822114455",
+      "email": "suresh@omkarelevators.in",
+      "address": "Plot 42, Phase II, GIDC Naroda, Ahmedabad",
+      "gstin": "24AABCO9988C1Z4",
+      "payment_terms": "30 Days"
     }
   ],
   "product_types": [
@@ -112,7 +136,7 @@ response :-
 ## 2. Add New Supplier First (AddSupplierScreen)
 
 Used when the user taps the add button next to the supplier dropdown to create a new supplier first.
-Accepts supplier name, contact person, mobile number, email, and supplier address.
+Accepts supplier name, contact person, mobile number, email, address, payment terms, and GSTIN.
 Supports both application/json and multipart/form-data.
 
 url : (http://192.168.1.54:8000/api/purchases/suppliers)
@@ -125,6 +149,17 @@ headers :-
 Content-Type: application/json
 (or multipart/form-data)
 
+parameters :-
+
+supplier_name : string (Required) - Supplier company or business name. Alias: name
+contact_person : string (Optional) - Name of contact person. Alias: contact
+mobile : string (Optional) - Contact mobile number. Alias: phone
+email : string (Optional) - Contact email address
+address : string (Optional) - Registered or factory address. Alias: supplier_address
+payment_terms : string (Optional) - Default payment terms. Options: Advance, 15 Days, 30 Days, 45 Days, 60 Days, Against Delivery. Default: 30 Days
+gstin : string (Optional) - 15-digit GST identification number
+supplier_code : string (Optional) - Custom supplier code. If omitted, sequential code like SUP018 is auto-generated
+
 body (JSON) :-
 
 {
@@ -133,6 +168,7 @@ body (JSON) :-
   "mobile": "9822114455",
   "email": "suresh@omkarelevators.in",
   "address": "Plot 42, Phase II, GIDC Naroda, Ahmedabad",
+  "payment_terms": "30 Days",
   "gstin": "24AABCO9988C1Z4"
 }
 
@@ -143,6 +179,7 @@ contact_person: Suresh Mehta
 mobile: 9822114455
 email: suresh@omkarelevators.in
 address: Plot 42, Phase II, GIDC Naroda, Ahmedabad
+payment_terms: 30 Days
 gstin: 24AABCO9988C1Z4
 
 response (HTTP 201 Created) :-
@@ -161,7 +198,8 @@ response (HTTP 201 Created) :-
     "phone": "9822114455",
     "email": "suresh@omkarelevators.in",
     "address": "Plot 42, Phase II, GIDC Naroda, Ahmedabad",
-    "gstin": "24AABCO9988C1Z4"
+    "gstin": "24AABCO9988C1Z4",
+    "payment_terms": "30 Days"
   }
 }
 
@@ -170,16 +208,16 @@ response (HTTP 201 Created) :-
 ## 3. Supplier Dropdown List (Select Supplier)
 
 Returns all suppliers stored in the database.
-Every supplier object has id, name, contact, mobile, email, and address matching Flutter controller keys.
+Every supplier object includes id, name, contact, mobile, email, address, and payment terms matching Flutter controller keys.
 
 url : (http://192.168.1.54:8000/api/purchases/suppliers)
 method : GET
 
 (Also supports http://192.168.1.54:8000/api/suppliers)
 
-params :-
+parameters :-
 
-(None)
+search : string (Optional) - Filter suppliers by name, code, contact person, or phone number
 
 response :-
 
@@ -198,7 +236,8 @@ response :-
       "phone": "9876543210",
       "email": "sales@abcelectrical.com",
       "address": "Industrial Area, Ahmedabad, Gujarat",
-      "gstin": "24AAACP1234F1Z1"
+      "gstin": "24AAACP1234F1Z1",
+      "payment_terms": "30 Days"
     },
     {
       "id": "SUP002",
@@ -212,7 +251,8 @@ response :-
       "phone": "9988776655",
       "email": "info@xyzpower.com",
       "address": "GIDC Estate, Vadodara, Gujarat",
-      "gstin": null
+      "gstin": "24AAACB5678K1Z2",
+      "payment_terms": "30 Days"
     },
     {
       "id": "SUP003",
@@ -226,7 +266,8 @@ response :-
       "phone": "9998887776",
       "email": "purchase@powerequipment.in",
       "address": "Industrial Estate, Surat, Gujarat",
-      "gstin": null
+      "gstin": "24AAACP9012M1Z3",
+      "payment_terms": "30 Days"
     },
     {
       "id": "SUP018",
@@ -240,7 +281,8 @@ response :-
       "phone": "9822114455",
       "email": "suresh@omkarelevators.in",
       "address": "Plot 42, Phase II, GIDC Naroda, Ahmedabad",
-      "gstin": "24AABCO9988C1Z4"
+      "gstin": "24AABCO9988C1Z4",
+      "payment_terms": "30 Days"
     }
   ]
 }
@@ -259,7 +301,7 @@ method : GET
 
 (Also supports http://192.168.1.54:8000/api/purchases/products)
 
-params :-
+parameters :-
 
 (None)
 
@@ -395,6 +437,19 @@ headers :-
 
 Content-Type: application/json
 
+parameters :-
+
+items : array of objects (Required) - List of added products. Each product object contains:
+- id : string (Required) - Product identifier (e.g. LIFT001)
+- name : string (Required) - Product name
+- price : float (Required) - Purchase price per unit. Alias: purchasePrice
+- qty : integer (Required) - Product quantity. Alias: quantity. Default: 1
+- gst : float (Optional) - GST percentage rate. Default: 18.0
+- unit : string (Optional) - Unit of measure (Nos, Set, Year, Job). Default: Nos
+- sku : string (Optional) - Product SKU code
+- type : string (Optional) - Product type
+- category : string (Optional) - Product category
+
 body :-
 
 {
@@ -425,11 +480,11 @@ response :-
 
 Creates the purchase order record in the database.
 Handles:
-- Supplier selection by supplier_id (for example: SUP001 or integer ID 1)
-- Contact Person, Mobile Number, Email, Supplier Address
-- Order details: PO number, PO date, expected delivery date, payment terms, reference, status (Draft or Ordered)
+- Supplier selection by supplier_id (SUP001, SUP018, or integer ID 1, 18)
+- Supplier details: supplier_name, contact_person, mobile, email, address
+- Order details: po_number, po_date, expected_delivery, payment_terms, reference, status (Draft or Ordered)
 - Full item array with technical specifications, price, quantity, and GST
-- Sub Total, GST Total, and Grand Total
+- Sub Total, GST Total, and Grand Total (auto-calculated from items if omitted)
 - Additional notes and instructions
 - Supports both application/json and multipart/form-data.
 
@@ -443,6 +498,26 @@ headers :-
 Content-Type: application/json
 (or multipart/form-data)
 
+parameters :-
+
+supplier_name : string (Required) - Business name of supplier. Alias: supplier
+items : array of objects (Required) - List of added products. At least 1 item is compulsory
+supplier_id : string or integer (Optional) - Supplier code (e.g. SUP001, SUP018) or DB integer ID. Recommended when picked from dropdown
+contact_person : string (Optional) - Contact person name. Alias: contact
+mobile : string (Optional) - Contact phone number. Alias: phone
+email : string (Optional) - Contact email address
+address : string (Optional) - Supplier or delivery address. Alias: supplier_address
+po_number : string (Optional) - PO number (e.g. PO-250517-0001). Auto-generated if omitted or empty
+po_date : string (Optional) - Date of PO. Default: current date (e.g. 18 Sep 2026)
+expected_delivery : string (Optional) - Expected delivery date. Alias: delivery_date. Default: current date + 7 days
+payment_terms : string (Optional) - Payment terms. Options: Advance, 15 Days, 30 Days, 45 Days, 60 Days, Against Delivery. Default: supplier payment_terms or 30 Days
+status : string (Optional) - PO Status. Options: Draft, Pending, Approved, Ordered, Received, Cancelled. Alias: po_status. Default: Draft
+reference : string (Optional) - Customer or order reference (e.g. REF-OCT-2025)
+subtotal : float (Optional) - Subtotal amount before GST. Auto-calculated if omitted
+gst_total : float (Optional) - Total GST tax amount. Auto-calculated if omitted
+grand_total : float (Optional) - Final order total. Auto-calculated if omitted
+notes : string (Optional) - Purchase order notes and instructions
+
 body (JSON - Save as Draft Example) :-
 
 {
@@ -453,9 +528,9 @@ body (JSON - Save as Draft Example) :-
   "mobile": "9876543210",
   "email": "sales@abcelectrical.com",
   "address": "Industrial Area, Ahmedabad, Gujarat",
+  "payment_terms": "30 Days",
   "po_date": "17 May 2025",
   "expected_delivery": "24 May 2025",
-  "payment_terms": "30 Days",
   "status": "Draft",
   "reference": "",
   "items": [
@@ -499,9 +574,9 @@ body (JSON - Place Purchase Order with New Supplier Example) :-
   "mobile": "9822114455",
   "email": "suresh@omkarelevators.in",
   "address": "Plot 42, Phase II, GIDC Naroda, Ahmedabad",
+  "payment_terms": "30 Days",
   "po_date": "18 May 2025",
   "expected_delivery": "25 May 2025",
-  "payment_terms": "30 Days",
   "status": "Ordered",
   "reference": "REF-OCT-2025",
   "items": [
@@ -534,6 +609,26 @@ body (JSON - Place Purchase Order with New Supplier Example) :-
   "grand_total": 460200.0,
   "notes": "Urgent requirement for Site A"
 }
+
+body (Multipart Form Data Example) :-
+
+po_number: PO-250517-0002
+supplier_id: SUP018
+supplier_name: Omkar Elevators & Switchgears
+contact_person: Suresh Mehta
+mobile: 9822114455
+email: suresh@omkarelevators.in
+address: Plot 42, Phase II, GIDC Naroda, Ahmedabad
+payment_terms: 30 Days
+po_date: 18 May 2025
+expected_delivery: 25 May 2025
+status: Ordered
+reference: REF-OCT-2025
+items: [{"id":"LIFT001","name":"G+2 Automatic Passenger Lift","sku":"LFT-001","type":"Lift","category":"Passenger Lift","price":390000.0,"purchasePrice":390000.0,"qty":1,"unit":"Nos","gst":18.0,"total":460200.0}]
+subtotal: 390000.0
+gst_total: 70200.0
+grand_total: 460200.0
+notes: Urgent requirement for Site A
 
 response (HTTP 201 Created) :-
 
@@ -664,9 +759,9 @@ method : GET
 
 (Also supports http://192.168.1.54:8000/api/purchase-orders/PO-250517-0001)
 
-params :-
+parameters :-
 
-(None)
+po_id : string or integer (Required in path) - PO Number (e.g. PO-250517-0001) or primary key ID
 
 response (Verified from db.sqlite3 record ID 11) :-
 
@@ -734,11 +829,11 @@ method : GET
 
 (Also supports http://192.168.1.54:8000/api/purchase-orders)
 
-optional query params :-
+parameters :-
 
-po_status: Draft
-supplier_name: Omkar
-search: Suresh
+search : string (Optional) - Search by PO number, supplier name, supplier code, reference, or contact person
+po_status : string (Optional) - Filter by status (Draft, Pending, Approved, Ordered, Received, Cancelled)
+supplier_name : string (Optional) - Filter by supplier name
 
 response :-
 
@@ -795,7 +890,7 @@ response :-
 
 ## 9. Update Purchase Order Status or Details
 
-Supports updating po_status (Draft, Pending, Approved, Ordered, Received, Cancelled), expected delivery date, payment terms, notes, or contact info.
+Supports updating po_status (Draft, Pending, Approved, Ordered, Received, Cancelled), expected delivery date, payment terms, reference, contact details, items, or notes.
 Lookup by string PO number or integer ID.
 
 url : (http://192.168.1.54:8000/api/purchases/PO-250517-0002)
@@ -806,6 +901,20 @@ method : PUT
 headers :-
 
 Content-Type: application/json
+(or multipart/form-data)
+
+parameters :-
+
+po_status : string (Optional) - New status: Draft, Pending, Approved, Ordered, Received, Cancelled. Alias: status
+expected_delivery : string (Optional) - Updated delivery date. Alias: delivery_date
+payment_terms : string (Optional) - Updated payment terms: Advance, 15 Days, 30 Days, 45 Days, 60 Days, Against Delivery
+reference : string (Optional) - Updated reference code
+contact_person : string (Optional) - Updated contact person name. Alias: contact
+mobile : string (Optional) - Updated mobile number. Alias: phone
+email : string (Optional) - Updated email address
+address : string (Optional) - Updated address
+notes : string (Optional) - Updated notes / instructions
+items : array of objects (Optional) - Updated product items array (recalculates subtotal, gst, grand_total automatically)
 
 body :-
 
@@ -878,6 +987,10 @@ url : (http://192.168.1.54:8000/api/purchases/PO-250517-0002)
 method : DELETE
 
 (Also supports http://192.168.1.54:8000/api/purchase-orders/PO-250517-0002)
+
+parameters :-
+
+po_id : string or integer (Required in path) - PO Number (e.g. PO-250517-0002) or integer ID
 
 response :-
 

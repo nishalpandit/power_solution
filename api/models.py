@@ -371,6 +371,7 @@ class Supplier(Base):
     email = Column(String(120), nullable=True)
     address = Column(Text, nullable=True)
     gstin = Column(String(50), nullable=True)
+    payment_terms = Column(String(50), default="30 Days", nullable=True)
 
     created_at = Column(DateTime, default=utc_now, nullable=False)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)

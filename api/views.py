@@ -3782,6 +3782,7 @@ def format_supplier_response(supplier: Supplier) -> dict:
         "email": supplier.email,
         "address": supplier.address,
         "gstin": supplier.gstin,
+        "payment_terms": getattr(supplier, "payment_terms", None) or "30 Days",
     }
 
 
@@ -3871,8 +3872,9 @@ async def create_supplier(
     contact = str(payload.get("contact") or payload.get("contact_person") or "").strip() or None
     mobile = str(payload.get("mobile") or payload.get("phone") or "").strip() or None
     email = str(payload.get("email") or "").strip() or None
-    address = str(payload.get("address") or "").strip() or None
+    address = str(payload.get("address") or payload.get("supplier_address") or "").strip() or None
     gstin = str(payload.get("gstin") or "").strip() or None
+    payment_terms = str(payload.get("payment_terms") or "30 Days").strip()
 
     supplier_code = str(payload.get("supplier_code") or "").strip()
     if not supplier_code:
@@ -3896,6 +3898,8 @@ async def create_supplier(
                 existing.address = address
             if gstin:
                 existing.gstin = gstin
+            if payment_terms:
+                existing.payment_terms = payment_terms
             db.commit()
             db.refresh(existing)
             return {
@@ -3911,6 +3915,7 @@ async def create_supplier(
         email=email,
         address=address,
         gstin=gstin,
+        payment_terms=payment_terms,
     )
     db.add(supplier)
     db.commit()
