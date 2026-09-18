@@ -3628,22 +3628,45 @@ def delete_cash_bill(bill_id: int, db: Session = Depends(get_db)):
 # PURCHASE ORDER & SUPPLIER ENDPOINTS (AddPurchaseOrderScreen)
 # ==============================================================================
 
+async def extract_request_payload(request: Request) -> dict:
+    content_type = request.headers.get("content-type", "").lower()
+    if "application/json" in content_type:
+        try:
+            return await request.json()
+        except Exception:
+            pass
+    elif "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
+        try:
+            form = await request.form()
+            return dict(form)
+        except Exception:
+            pass
+    try:
+        return await request.json()
+    except Exception:
+        try:
+            form = await request.form()
+            return dict(form)
+        except Exception:
+            return {}
+
+
 def ensure_default_suppliers(db: Session):
     defaults = [
         {
             "supplier_code": "SUP001",
-            "name": "Perfect Generators Pvt. Ltd.",
-            "contact_person": "Rajesh Sharma",
+            "name": "ABC Electrical Pvt. Ltd.",
+            "contact_person": "Rajesh Kumar",
             "mobile": "9876543210",
-            "email": "sales@perfectgenerators.com",
+            "email": "sales@abcelectrical.com",
             "address": "Industrial Area, Ahmedabad, Gujarat",
         },
         {
             "supplier_code": "SUP002",
-            "name": "ABC Electrical Pvt. Ltd.",
-            "contact_person": "Amit Patel",
+            "name": "XYZ Power Systems",
+            "contact_person": "Amit Sharma",
             "mobile": "9988776655",
-            "email": "sales@abcelectrical.com",
+            "email": "info@xyzpower.com",
             "address": "GIDC Estate, Vadodara, Gujarat",
         },
         {
@@ -3653,14 +3676,6 @@ def ensure_default_suppliers(db: Session):
             "mobile": "9998887776",
             "email": "purchase@powerequipment.in",
             "address": "Industrial Estate, Surat, Gujarat",
-        },
-        {
-            "supplier_code": "SUP004",
-            "name": "Reliable Power Systems Ltd",
-            "contact_person": "Sunil Verma",
-            "mobile": "9123456780",
-            "email": "info@reliablepower.com",
-            "address": "GIDC Naroda, Ahmedabad",
         },
     ]
     for s_data in defaults:
@@ -3733,6 +3748,7 @@ def compute_po_totals(items: list) -> dict:
             "type": str(item.get("type") or "Other"),
             "category": str(item.get("category") or ""),
             "price": price,
+            "purchasePrice": price,
             "qty": qty,
             "unit": str(item.get("unit") or "Nos"),
             "gst": gst_rate,
@@ -3758,9 +3774,11 @@ def format_supplier_response(supplier: Supplier) -> dict:
         "supplier_id": supplier.id,
         "supplier_code": supplier.supplier_code,
         "name": supplier.name,
+        "supplier_name": supplier.name,
         "contact": supplier.contact_person,
         "contact_person": supplier.contact_person,
         "mobile": supplier.mobile,
+        "phone": supplier.mobile,
         "email": supplier.email,
         "address": supplier.address,
         "gstin": supplier.gstin,
@@ -3773,21 +3791,28 @@ def format_po_response(po: PurchaseOrder) -> dict:
         "po_number": po.po_number,
         "po_date": po.po_date,
         "expected_delivery": po.expected_delivery,
+        "delivery_date": po.expected_delivery,
         "po_status": po.po_status,
         "status": po.po_status,
         "payment_terms": po.payment_terms,
         "reference": po.reference,
-        "supplier_id": po.supplier_id,
+        "supplier_id": po.supplier_code or str(po.supplier_id),
+        "supplier_db_id": po.supplier_id,
         "supplier_code": po.supplier_code,
         "supplier_name": po.supplier_name,
         "contact_person": po.contact_person,
+        "contact": po.contact_person,
         "mobile": po.mobile,
+        "phone": po.mobile,
         "email": po.email,
         "address": po.address,
         "items": po.items or [],
         "subtotal": float(po.subtotal or 0.0),
         "gst_total": float(po.gst_total or 0.0),
         "grand_total": float(po.grand_total or 0.0),
+        "formatted_subtotal": format_currency_inr(po.subtotal or 0.0),
+        "formatted_gst_total": format_currency_inr(po.gst_total or 0.0),
+        "formatted_grand_total": format_currency_inr(po.grand_total or 0.0),
         "notes": po.notes,
         "created_at": po.created_at.isoformat() if po.created_at else None,
         "updated_at": po.updated_at.isoformat() if po.updated_at else None,
@@ -3796,6 +3821,7 @@ def format_po_response(po: PurchaseOrder) -> dict:
 
 @router.get("/purchases/next-po-number")
 @router.get("/purchases/next-number")
+@router.get("/purchase-orders/next-number")
 def get_next_po_number(db: Session = Depends(get_db)):
     return {
         "po_number": generate_po_no(db)
@@ -3803,6 +3829,8 @@ def get_next_po_number(db: Session = Depends(get_db)):
 
 
 @router.get("/purchases/suppliers")
+@router.get("/suppliers")
+@router.get("/purchase-orders/suppliers")
 def list_suppliers(
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
@@ -3829,22 +3857,25 @@ def list_suppliers(
 
 
 @router.post("/purchases/suppliers", status_code=status.HTTP_201_CREATED)
+@router.post("/suppliers", status_code=status.HTTP_201_CREATED)
+@router.post("/purchase-orders/suppliers", status_code=status.HTTP_201_CREATED)
 async def create_supplier(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    try:
-        payload = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
-
-    name = str(payload.get("name") or "").strip()
+    payload = await extract_request_payload(request)
+    name = str(payload.get("name") or payload.get("supplier_name") or "").strip()
     if not name:
         raise HTTPException(status_code=422, detail="Supplier name is required")
 
+    contact = str(payload.get("contact") or payload.get("contact_person") or "").strip() or None
+    mobile = str(payload.get("mobile") or payload.get("phone") or "").strip() or None
+    email = str(payload.get("email") or "").strip() or None
+    address = str(payload.get("address") or "").strip() or None
+    gstin = str(payload.get("gstin") or "").strip() or None
+
     supplier_code = str(payload.get("supplier_code") or "").strip()
     if not supplier_code:
-        # Auto-generate unique SUP00X
         last_sup = db.query(Supplier).order_by(Supplier.id.desc()).first()
         next_num = (last_sup.id + 1) if last_sup else 1
         supplier_code = f"SUP{next_num:03d}"
@@ -3855,16 +3886,16 @@ async def create_supplier(
         existing = db.query(Supplier).filter(Supplier.supplier_code == supplier_code).first()
         if existing:
             existing.name = name
-            if payload.get("contact_person") or payload.get("contact"):
-                existing.contact_person = str(payload.get("contact_person") or payload.get("contact")).strip()
-            if payload.get("mobile"):
-                existing.mobile = str(payload.get("mobile")).strip()
-            if payload.get("email"):
-                existing.email = str(payload.get("email")).strip()
-            if payload.get("address"):
-                existing.address = str(payload.get("address")).strip()
-            if payload.get("gstin"):
-                existing.gstin = str(payload.get("gstin")).strip()
+            if contact:
+                existing.contact_person = contact
+            if mobile:
+                existing.mobile = mobile
+            if email:
+                existing.email = email
+            if address:
+                existing.address = address
+            if gstin:
+                existing.gstin = gstin
             db.commit()
             db.refresh(existing)
             return {
@@ -3875,11 +3906,11 @@ async def create_supplier(
     supplier = Supplier(
         supplier_code=supplier_code,
         name=name,
-        contact_person=str(payload.get("contact_person") or payload.get("contact") or "").strip() or None,
-        mobile=str(payload.get("mobile") or "").strip() or None,
-        email=str(payload.get("email") or "").strip() or None,
-        address=str(payload.get("address") or "").strip() or None,
-        gstin=str(payload.get("gstin") or "").strip() or None,
+        contact_person=contact,
+        mobile=mobile,
+        email=email,
+        address=address,
+        gstin=gstin,
     )
     db.add(supplier)
     db.commit()
@@ -3888,6 +3919,57 @@ async def create_supplier(
     return {
         "message": f"Supplier '{supplier.name}' created successfully",
         "supplier": format_supplier_response(supplier),
+    }
+
+
+@router.get("/purchases/create-data")
+@router.get("/purchase-orders/create-data")
+def get_purchase_create_data(db: Session = Depends(get_db)):
+    """
+    Initializes AddPurchaseOrderScreen in a single round-trip:
+    - Auto-generated PO Number & dates
+    - Preloaded suppliers
+    - Product Picker hierarchies (types, categories, products)
+    - Payment terms and PO status options
+    """
+    ensure_default_suppliers(db)
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    po_number = generate_po_no(db)
+    po_date = now.strftime("%d %b %Y")
+    expected_delivery = (now + timedelta(days=7)).strftime("%d %b %Y")
+
+    suppliers = [format_supplier_response(s) for s in db.query(Supplier).order_by(Supplier.id.asc()).all()]
+    picker = get_purchase_product_picker(db)
+
+    return {
+        "po_number": po_number,
+        "next_po_number": po_number,
+        "po_date": po_date,
+        "delivery_date": expected_delivery,
+        "expected_delivery": expected_delivery,
+        "payment_terms": "30 Days",
+        "payment_terms_options": [
+            "Advance",
+            "15 Days",
+            "30 Days",
+            "45 Days",
+            "60 Days",
+            "Against Delivery",
+        ],
+        "po_status": "Draft",
+        "po_status_options": [
+            "Draft",
+            "Pending",
+            "Approved",
+            "Ordered",
+            "Received",
+            "Cancelled",
+        ],
+        "suppliers": suppliers,
+        "product_types": picker.get("product_types", []),
+        "categories": picker.get("categories", {}),
+        "products": picker.get("products", {}),
     }
 
 
@@ -4181,6 +4263,7 @@ def get_purchase_product_picker(db: Session = Depends(get_db)):
 
 
 @router.post("/purchases/calculate")
+@router.post("/purchase-orders/calculate")
 async def calculate_purchase_order(
     request: Request,
 ):
@@ -4188,12 +4271,15 @@ async def calculate_purchase_order(
     Live calculation endpoint for AddPurchaseOrderScreen:
     Calculates Sub Total, GST Total, and Grand Total.
     """
-    try:
-        payload = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
-
+    payload = await extract_request_payload(request)
     items = payload.get("items") or []
+    if isinstance(items, str):
+        try:
+            import json
+            items = json.loads(items)
+        except Exception:
+            items = []
+
     computed = compute_po_totals(items)
 
     return {
@@ -4205,16 +4291,24 @@ async def calculate_purchase_order(
 
 @router.post("/purchases", status_code=status.HTTP_201_CREATED)
 @router.post("/purchases/create", status_code=status.HTTP_201_CREATED)
+@router.post("/purchase-orders", status_code=status.HTTP_201_CREATED)
+@router.post("/purchase-orders/create", status_code=status.HTTP_201_CREATED)
 async def create_purchase_order(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    try:
-        payload = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
+    payload = await extract_request_payload(request)
+    if not payload:
+        raise HTTPException(status_code=400, detail="Invalid request body")
 
     items = payload.get("items") or []
+    if isinstance(items, str):
+        try:
+            import json
+            items = json.loads(items)
+        except Exception:
+            items = []
+
     if not items:
         raise HTTPException(status_code=422, detail="Please add at least one product")
 
@@ -4222,29 +4316,40 @@ async def create_purchase_order(
     if not po_number or db.query(PurchaseOrder).filter(PurchaseOrder.po_number == po_number).first():
         po_number = generate_po_no(db)
 
-    # Supplier linkage
-    supplier_id_val = payload.get("supplier_id")
+    # Supplier linkage: match by id (int), supplier_code (SUP001), or name
+    supplier_id_val = payload.get("supplier_id") or payload.get("supplierId")
     sup_obj = None
     if supplier_id_val is not None:
-        if str(supplier_id_val).isdigit():
-            sup_obj = db.query(Supplier).filter(Supplier.id == int(supplier_id_val)).first()
-        else:
-            sup_obj = db.query(Supplier).filter(Supplier.supplier_code == str(supplier_id_val).strip()).first()
+        val_str = str(supplier_id_val).strip()
+        if val_str.isdigit():
+            sup_obj = db.query(Supplier).filter(Supplier.id == int(val_str)).first()
+        if not sup_obj:
+            sup_obj = db.query(Supplier).filter(Supplier.supplier_code == val_str).first()
+        if not sup_obj:
+            sup_obj = db.query(Supplier).filter(Supplier.name.ilike(val_str)).first()
 
-    supplier_id = sup_obj.id if sup_obj else None
-    supplier_code = sup_obj.supplier_code if sup_obj else (str(supplier_id_val) if supplier_id_val and not str(supplier_id_val).isdigit() else None)
-    supplier_name = str(payload.get("supplier_name") or (sup_obj.name if sup_obj else "")).strip()
+    supplier_name = str(payload.get("supplier_name") or payload.get("supplier") or payload.get("name") or (sup_obj.name if sup_obj else "")).strip()
+    if not sup_obj and supplier_name:
+        sup_obj = db.query(Supplier).filter(Supplier.name.ilike(supplier_name)).first()
+
+    if not supplier_name and sup_obj:
+        supplier_name = sup_obj.name
+
     if not supplier_name:
         raise HTTPException(status_code=422, detail="Please select or provide supplier name")
 
+    supplier_id = sup_obj.id if sup_obj else None
+    supplier_code = sup_obj.supplier_code if sup_obj else (str(supplier_id_val) if supplier_id_val and not str(supplier_id_val).isdigit() else None)
+
+    # Contact Person, Mobile, Email, Address: prioritize what the user entered in Flutter controllers
     contact_person = str(payload.get("contact_person") or payload.get("contact") or (sup_obj.contact_person if sup_obj else "")).strip() or None
-    mobile = str(payload.get("mobile") or (sup_obj.mobile if sup_obj else "")).strip() or None
+    mobile = str(payload.get("mobile") or payload.get("phone") or (sup_obj.mobile if sup_obj else "")).strip() or None
     email = str(payload.get("email") or (sup_obj.email if sup_obj else "")).strip() or None
-    address = str(payload.get("address") or (sup_obj.address if sup_obj else "")).strip() or None
+    address = str(payload.get("address") or payload.get("supplier_address") or (sup_obj.address if sup_obj else "")).strip() or None
 
     from datetime import datetime
     po_date = str(payload.get("po_date") or datetime.now().strftime("%d %b %Y")).strip()
-    expected_delivery = str(payload.get("expected_delivery") or "").strip() or None
+    expected_delivery = str(payload.get("expected_delivery") or payload.get("delivery_date") or "").strip() or None
     payment_terms = str(payload.get("payment_terms") or "30 Days").strip()
     status_val = str(payload.get("status") or payload.get("po_status") or "Draft").strip().capitalize()
     reference = str(payload.get("reference") or "").strip() or None
@@ -4277,14 +4382,16 @@ async def create_purchase_order(
     db.commit()
     db.refresh(po)
 
+    formatted = format_po_response(po)
     return {
         "message": f"Purchase order '{po.po_number}' created successfully",
-        "purchase_order": format_po_response(po),
-        "po": format_po_response(po),
+        "purchase_order": formatted,
+        "po": formatted,
     }
 
 
 @router.get("/purchases")
+@router.get("/purchase-orders")
 def list_purchase_orders(
     search: Optional[str] = Query(None),
     po_status: Optional[str] = Query(None),
@@ -4320,28 +4427,38 @@ def list_purchase_orders(
     }
 
 
+def find_purchase_order(po_id: str, db: Session) -> Optional[PurchaseOrder]:
+    val = str(po_id).strip()
+    if val.isdigit():
+        po = db.query(PurchaseOrder).filter(PurchaseOrder.id == int(val)).first()
+        if po:
+            return po
+    return db.query(PurchaseOrder).filter(PurchaseOrder.po_number.ilike(val)).first()
+
+
 @router.get("/purchases/{po_id}")
-def get_purchase_order(po_id: int, db: Session = Depends(get_db)):
-    po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
+@router.get("/purchase-orders/{po_id}")
+def get_purchase_order(po_id: str, db: Session = Depends(get_db)):
+    po = find_purchase_order(po_id, db)
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
     return format_po_response(po)
 
 
 @router.put("/purchases/{po_id}")
+@router.put("/purchase-orders/{po_id}")
 async def update_purchase_order(
-    po_id: int,
+    po_id: str,
     request: Request,
     db: Session = Depends(get_db),
 ):
-    po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
+    po = find_purchase_order(po_id, db)
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
 
-    try:
-        payload = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
+    payload = await extract_request_payload(request)
+    if not payload:
+        raise HTTPException(status_code=400, detail="Invalid request body")
 
     if "po_status" in payload and payload["po_status"]:
         po.po_status = str(payload["po_status"]).strip().capitalize()
@@ -4350,6 +4467,9 @@ async def update_purchase_order(
 
     if "expected_delivery" in payload:
         po.expected_delivery = str(payload["expected_delivery"]).strip() or None
+    elif "delivery_date" in payload:
+        po.expected_delivery = str(payload["delivery_date"]).strip() or None
+
     if "payment_terms" in payload and payload["payment_terms"]:
         po.payment_terms = str(payload["payment_terms"]).strip()
     if "reference" in payload:
@@ -4357,26 +4477,52 @@ async def update_purchase_order(
     if "notes" in payload:
         po.notes = str(payload["notes"]).strip() or None
 
+    if "contact_person" in payload:
+        po.contact_person = str(payload["contact_person"]).strip() or None
+    elif "contact" in payload:
+        po.contact_person = str(payload["contact"]).strip() or None
+
+    if "mobile" in payload:
+        po.mobile = str(payload["mobile"]).strip() or None
+    elif "phone" in payload:
+        po.mobile = str(payload["phone"]).strip() or None
+
+    if "email" in payload:
+        po.email = str(payload["email"]).strip() or None
+
+    if "address" in payload:
+        po.address = str(payload["address"]).strip() or None
+
     if "items" in payload and payload["items"]:
-        computed = compute_po_totals(payload["items"])
-        po.items = computed["items"]
-        po.subtotal = computed["subtotal"]
-        po.gst_total = computed["gst_total"]
-        po.grand_total = computed["grand_total"]
+        items = payload["items"]
+        if isinstance(items, str):
+            try:
+                import json
+                items = json.loads(items)
+            except Exception:
+                items = []
+        if items:
+            computed = compute_po_totals(items)
+            po.items = computed["items"]
+            po.subtotal = computed["subtotal"]
+            po.gst_total = computed["gst_total"]
+            po.grand_total = computed["grand_total"]
 
     db.commit()
     db.refresh(po)
 
+    formatted = format_po_response(po)
     return {
         "message": f"Purchase order '{po.po_number}' updated successfully",
-        "purchase_order": format_po_response(po),
-        "po": format_po_response(po),
+        "purchase_order": formatted,
+        "po": formatted,
     }
 
 
 @router.delete("/purchases/{po_id}")
-def delete_purchase_order(po_id: int, db: Session = Depends(get_db)):
-    po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
+@router.delete("/purchase-orders/{po_id}")
+def delete_purchase_order(po_id: str, db: Session = Depends(get_db)):
+    po = find_purchase_order(po_id, db)
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
 
