@@ -2,23 +2,9 @@
 
 Bearer token is compulsory for all endpoints.
 The user is automatically identified from the Bearer token.
-The backend returns ONLY quotations belonging to that logged-in user.
-No user_id, phone, email, or customer_name parameters are needed.
+The backend returns quotations belonging to the logged-in user.
 
-Important: This API does NOT return quotations for all users combined.
-Each user sees strictly their own quotations.
-
-Database Verification Proof Across All Users in db.sqlite3:
-- User 11 (Rajesh Kumar / Skyline Enterprises): 5 quotations, Total Rs 24,62,000.00 (QTN-250517-0001, QTN-260910-0002, QTN-260910-0001, QTN-250517-JSON1, QTN-250517-FORM1)
-- User 12 (Metro Builders): 1 quotation, Total Rs 75,000.00 (QTN-METRO-0001)
-- User 7 (Aman): 0 quotations, Total Rs 0.00
-- User 8 (Deep Amam): 0 quotations, Total Rs 0.00
-- User 4 (Nihal): 0 quotations, Total Rs 0.00
-- User 1 (Test User): 0 quotations, Total Rs 0.00
-- Admin All Quotations API (GET /api/quotations): 8 quotations total across all customers in db.sqlite3
-
-
-If request is sent without Bearer token or with invalid token, API returns:
+Unauthorized response without token:
 HTTP 401 Unauthorized
 {
   "detail": "Bearer token is compulsory. Please provide Authorization: Bearer <token>"

@@ -1,35 +1,21 @@
-# Create Purchase Order and Supplier API Documentation
+# Purchase Order and Supplier API Documentation
 
 Base URL: http://192.168.1.54:8000/api
-Database Verification: db.sqlite3 (All responses below are verified against real database records)
-
-This documentation directly corresponds to the Flutter AddPurchaseOrderScreen and AddSupplierScreen workflows:
-1. Add new supplier first via AddSupplierScreen (POST /api/purchases/suppliers) with supplier name, contact person, mobile number, email, address, city, state, pincode, payment terms, GSTIN, PAN number, and remarks/notes.
-2. Select supplier from dropdown in AddPurchaseOrderScreen (GET /api/purchases/suppliers).
-3. Contact person, mobile number, email, supplier address, and payment terms automatically populate into the form controllers upon selection. If custom, user can enter or modify them manually.
-4. Auto-generate or specify PO number, PO date, expected delivery date, payment terms, reference, and status (Draft or Ordered).
-5. Add items from Product Master Picker (types, categories, products with specifications, price, qty, unit, gst).
-6. Live summary calculation for Sub Total, GST, and Grand Total (POST /api/purchases/calculate).
-7. Save as Draft or Place Purchase Order (POST /api/purchases).
-8. Support for both application/json and multipart/form-data.
-9. Support for both integer ID and string PO number (for example: PO-250517-0001).
 
 ---
 
-## 1. Screen Initialization (Single Round-Trip for AddPurchaseOrderScreen)
+## 1. Create Purchase Order Screen Data
 
-Loads next auto-generated PO number, today date, default delivery date (7 days later), payment terms, status options, supplier dropdown list with payment terms, and the complete product picker master in one single request.
+Loads auto-generated PO number, dates, payment terms, status options, suppliers list, and product picker master in one request.
 
 url : (http://192.168.1.54:8000/api/purchases/create-data)
 method : GET
-
-(Also supports http://192.168.1.54:8000/api/purchase-orders/create-data)
 
 headers :-
 
 Content-Type: application/json
 
-parameters :-
+params :-
 
 (None)
 
@@ -157,37 +143,30 @@ response :-
 
 ---
 
-## 2. Add New Supplier First (AddSupplierScreen)
-
-Used when the user taps the add button next to the supplier dropdown to create a new supplier first.
-Accepts supplier name, contact person, mobile number, email, address, city, state, pincode, payment terms, GSTIN, PAN number, and remarks/notes.
-Supports both application/json and multipart/form-data.
+## 2. Add New Supplier
 
 url : (http://192.168.1.54:8000/api/purchases/suppliers)
 method : POST
 
-(Also supports http://192.168.1.54:8000/api/suppliers and http://192.168.1.54:8000/api/purchase-orders/suppliers)
-
 headers :-
 
-Content-Type: application/json
-(or multipart/form-data)
+Content-Type: application/json (or multipart/form-data)
 
-parameters :-
+params :-
 
-supplier_name : string (Required) - Supplier company or business name. Alias: name
-contact_person : string (Optional) - Name of primary contact person. Alias: contact
-mobile : string (Optional) - Contact phone or mobile number. Alias: phone
-email : string (Optional) - Contact email address
-address : string (Optional) - Registered street or building address. Alias: supplier_address
-city : string (Optional) - City of supplier (e.g. Ahmedabad)
-state : string (Optional) - State of supplier (e.g. Gujarat)
-pincode : string (Optional) - Postal PIN code (e.g. 382330). Alias: pin
-payment_terms : string (Optional) - Default payment terms. Options: Advance, 15 Days, 30 Days, 45 Days, 60 Days, Against Delivery. Default: 30 Days
-gstin : string (Optional) - 15-digit GST identification number
-pan_number : string (Optional) - 10-digit PAN number (e.g. AABCO9988C). Alias: pan
-remarks : string (Optional) - Supplier remarks or special notes. Alias: notes
-supplier_code : string (Optional) - Custom supplier code (e.g. SUP018). If omitted, sequentially auto-generated
+supplier_name : string (Required)
+contact_person : string (Optional)
+mobile : string (Optional)
+email : string (Optional)
+address : string (Optional)
+city : string (Optional)
+state : string (Optional)
+pincode : string (Optional)
+payment_terms : string (Optional, default: 30 Days)
+gstin : string (Optional)
+pan_number : string (Optional)
+remarks : string (Optional)
+supplier_code : string (Optional, auto-generated if omitted)
 
 body (JSON) :-
 
@@ -221,7 +200,7 @@ gstin: 24AABCO9988C1Z4
 pan_number: AABCO9988C
 remarks: Authorized OEM supplier for heavy duty lift components and traction motors
 
-response (HTTP 201 Created) :-
+response :-
 
 {
   "message": "Supplier 'Omkar Elevators & Switchgears' updated successfully",
@@ -250,19 +229,14 @@ response (HTTP 201 Created) :-
 
 ---
 
-## 3. Supplier Dropdown List (Select Supplier)
-
-Returns all suppliers stored in the database.
-Every supplier object includes id, name, contact, mobile, email, address, city, state, pincode, GSTIN, PAN number, payment terms, and remarks matching Flutter controller keys.
+## 3. Supplier List
 
 url : (http://192.168.1.54:8000/api/purchases/suppliers)
 method : GET
 
-(Also supports http://192.168.1.54:8000/api/suppliers)
+params :-
 
-parameters :-
-
-search : string (Optional) - Filter suppliers by name, code, contact person, mobile number, city, or state
+search : string (Optional)
 
 response :-
 
@@ -358,19 +332,12 @@ response :-
 
 ---
 
-## 4. Product Picker Master (Modal Bottom Sheet in Flutter)
-
-Provides the 3-level product hierarchy:
-Level 1: Product Types (Lift, Generator, LT Panel, Earthing, Service, Other)
-Level 2: Categories mapped under each Product Type
-Level 3: Products mapped under each Category with full technical specifications, purchasePrice, SKU, unit, and GST (18%)
+## 4. Product Picker Master
 
 url : (http://192.168.1.54:8000/api/purchases/product-picker)
 method : GET
 
-(Also supports http://192.168.1.54:8000/api/purchases/products)
-
-parameters :-
+params :-
 
 (None)
 
@@ -493,32 +460,27 @@ response :-
 
 ---
 
-## 5. Live Calculation Preview (Order Summary Section)
-
-Calculates Sub Total, GST Total, and Grand Total when item quantities change or new products are added.
+## 5. Calculate Purchase Order
 
 url : (http://192.168.1.54:8000/api/purchases/calculate)
 method : POST
-
-(Also supports http://192.168.1.54:8000/api/purchase-orders/calculate)
 
 headers :-
 
 Content-Type: application/json
 
-parameters :-
+params :-
 
-items : array of objects (Required) - List of added products. Each product object contains:
-- id : string (Required) - Product identifier (e.g. LIFT001)
-- name : string (Required) - Product name
-- price : float (Required) - Purchase price per unit. Alias: purchasePrice
-- qty : integer (Required) - Product quantity. Alias: quantity. Default: 1
-- gst : float (Optional) - GST percentage rate. Default: 18.0
-- unit : string (Optional) - Unit of measure (Nos, Set, Year, Job). Default: Nos
-- sku : string (Optional) - Product SKU code
-- type : string (Optional) - Product type
-- category : string (Optional) - Product category
-- specifications : object (Optional) - Technical specifications dictionary
+items : array of objects (Required)
+- id : string (Required)
+- name : string (Required)
+- price : float (Required)
+- qty : integer (Required)
+- gst : float (Optional, default: 18.0)
+- unit : string (Optional, default: Nos)
+- sku : string (Optional)
+- type : string (Optional)
+- category : string (Optional)
 
 body :-
 
@@ -548,47 +510,34 @@ response :-
 
 ## 6. Place Purchase Order / Save as Draft
 
-Creates the purchase order record in the database.
-Handles:
-- Supplier selection by supplier_id (SUP001, SUP018, or integer ID 1, 18)
-- Supplier details: supplier_name, contact_person, mobile, email, address
-- Order details: po_number, po_date, expected_delivery, payment_terms, reference, status (Draft or Ordered)
-- Full item array with technical specifications, price, quantity, and GST
-- Sub Total, GST Total, and Grand Total (auto-calculated from items if omitted)
-- Additional notes, remarks, and instructions
-- Supports both application/json and multipart/form-data.
-
 url : (http://192.168.1.54:8000/api/purchases)
 method : POST
 
-(Also supports http://192.168.1.54:8000/api/purchases/create, http://192.168.1.54:8000/api/purchase-orders, and http://192.168.1.54:8000/api/purchase-orders/create)
-
 headers :-
 
-Content-Type: application/json
-(or multipart/form-data)
+Content-Type: application/json (or multipart/form-data)
 
-parameters :-
+params :-
 
-supplier_name : string (Required) - Business name of supplier. Alias: supplier
-items : array of objects (Required) - List of added products. At least 1 item is compulsory
-supplier_id : string or integer (Optional) - Supplier code (e.g. SUP001, SUP018) or DB integer ID. Recommended when picked from dropdown
-contact_person : string (Optional) - Contact person name. Alias: contact
-mobile : string (Optional) - Contact phone number. Alias: phone
-email : string (Optional) - Contact email address
-address : string (Optional) - Supplier or delivery address. Alias: supplier_address
-po_number : string (Optional) - PO number (e.g. PO-250517-0001). Auto-generated if omitted or empty
-po_date : string (Optional) - Date of PO. Default: current date (e.g. 18 Sep 2026)
-expected_delivery : string (Optional) - Expected delivery date. Alias: delivery_date. Default: current date + 7 days
-payment_terms : string (Optional) - Payment terms. Options: Advance, 15 Days, 30 Days, 45 Days, 60 Days, Against Delivery. Default: supplier payment_terms or 30 Days
-status : string (Optional) - PO Status. Options: Draft, Pending, Approved, Ordered, Received, Cancelled. Alias: po_status. Default: Draft
-reference : string (Optional) - Customer or order reference (e.g. REF-OCT-2025)
-subtotal : float (Optional) - Subtotal amount before GST. Auto-calculated if omitted
-gst_total : float (Optional) - Total GST tax amount. Auto-calculated if omitted
-grand_total : float (Optional) - Final order total. Auto-calculated if omitted
-notes : string (Optional) - Purchase order notes, remarks, or special instructions. Alias: remarks
+supplier_name : string (Required)
+items : array of objects (Required)
+supplier_id : string or integer (Optional)
+contact_person : string (Optional)
+mobile : string (Optional)
+email : string (Optional)
+address : string (Optional)
+po_number : string (Optional, auto-generated if omitted)
+po_date : string (Optional, default: today)
+expected_delivery : string (Optional, default: today + 7 days)
+payment_terms : string (Optional, default: 30 Days)
+status : string (Optional, default: Draft)
+reference : string (Optional)
+subtotal : float (Optional)
+gst_total : float (Optional)
+grand_total : float (Optional)
+notes : string (Optional)
 
-body (JSON - Save as Draft Example) :-
+body (Save as Draft Example) :-
 
 {
   "po_number": "PO-250517-0001",
@@ -634,7 +583,7 @@ body (JSON - Save as Draft Example) :-
   "notes": ""
 }
 
-body (JSON - Place Purchase Order with New Supplier Example) :-
+body (Place Purchase Order Example) :-
 
 {
   "po_number": "PO-250517-0002",
@@ -700,7 +649,7 @@ gst_total: 70200.0
 grand_total: 460200.0
 notes: Urgent requirement for Site A
 
-response (HTTP 201 Created) :-
+response :-
 
 {
   "message": "Purchase order 'PO-250517-0002' created successfully",
@@ -822,20 +771,16 @@ response (HTTP 201 Created) :-
 
 ---
 
-## 7. Get Purchase Order Details by PO Number or ID
-
-Lookup by string PO number (for example: PO-250517-0001 or PO-250517-0002) or integer primary key.
+## 7. Get Purchase Order Details
 
 url : (http://192.168.1.54:8000/api/purchases/PO-250517-0001)
 method : GET
 
-(Also supports http://192.168.1.54:8000/api/purchase-orders/PO-250517-0001)
+params :-
 
-parameters :-
+po_id : string or integer (In URL path)
 
-po_id : string or integer (Required in path) - PO Number (e.g. PO-250517-0001) or primary key ID
-
-response (Verified from db.sqlite3 record ID 11) :-
+response :-
 
 {
   "id": 11,
@@ -895,18 +840,16 @@ response (Verified from db.sqlite3 record ID 11) :-
 
 ---
 
-## 8. List Purchase Orders (With Filtering)
+## 8. List Purchase Orders
 
 url : (http://192.168.1.54:8000/api/purchases)
 method : GET
 
-(Also supports http://192.168.1.54:8000/api/purchase-orders)
+params :-
 
-parameters :-
-
-search : string (Optional) - Search by PO number, supplier name, supplier code, reference, or contact person
-po_status : string (Optional) - Filter by status (Draft, Pending, Approved, Ordered, Received, Cancelled)
-supplier_name : string (Optional) - Filter by supplier name
+search : string (Optional)
+po_status : string (Optional)
+supplier_name : string (Optional)
 
 response :-
 
@@ -962,33 +905,28 @@ response :-
 
 ---
 
-## 9. Update Purchase Order Status or Details
-
-Supports updating po_status (Draft, Pending, Approved, Ordered, Received, Cancelled), expected delivery date, payment terms, reference, contact details, items, notes, or remarks.
-Lookup by string PO number or integer ID.
+## 9. Update Purchase Order
 
 url : (http://192.168.1.54:8000/api/purchases/PO-250517-0002)
 method : PUT
 
-(Also supports http://192.168.1.54:8000/api/purchase-orders/PO-250517-0002)
-
 headers :-
 
-Content-Type: application/json
-(or multipart/form-data)
+Content-Type: application/json (or multipart/form-data)
 
-parameters :-
+params :-
 
-po_status : string (Optional) - New status: Draft, Pending, Approved, Ordered, Received, Cancelled. Alias: status
-expected_delivery : string (Optional) - Updated delivery date. Alias: delivery_date
-payment_terms : string (Optional) - Updated payment terms: Advance, 15 Days, 30 Days, 45 Days, 60 Days, Against Delivery
-reference : string (Optional) - Updated reference code
-contact_person : string (Optional) - Updated contact person name. Alias: contact
-mobile : string (Optional) - Updated mobile number. Alias: phone
-email : string (Optional) - Updated email address
-address : string (Optional) - Updated address
-notes : string (Optional) - Updated notes / instructions. Alias: remarks
-items : array of objects (Optional) - Updated product items array (recalculates subtotal, gst, grand_total automatically)
+po_id : string or integer (In URL path)
+po_status : string (Optional)
+expected_delivery : string (Optional)
+payment_terms : string (Optional)
+reference : string (Optional)
+contact_person : string (Optional)
+mobile : string (Optional)
+email : string (Optional)
+address : string (Optional)
+notes : string (Optional)
+items : array of objects (Optional)
 
 body :-
 
@@ -1062,11 +1000,9 @@ response :-
 url : (http://192.168.1.54:8000/api/purchases/PO-250517-0002)
 method : DELETE
 
-(Also supports http://192.168.1.54:8000/api/purchase-orders/PO-250517-0002)
+params :-
 
-parameters :-
-
-po_id : string or integer (Required in path) - PO Number (e.g. PO-250517-0002) or integer ID
+po_id : string or integer (In URL path)
 
 response :-
 

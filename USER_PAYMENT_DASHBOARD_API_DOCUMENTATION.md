@@ -2,22 +2,9 @@
 
 Bearer token is compulsory for all endpoints.
 The user is automatically identified from the Bearer token.
-The backend returns ONLY payments belonging to that logged-in user.
-No user_id, phone, email, or customer_name parameters are needed.
+The backend returns payments belonging to the logged-in user.
 
-Important: This API does NOT return payments for all users combined.
-Each user sees strictly their own payments.
-
-Database Verification Proof Across All Users in db.sqlite3:
-- User 11 (Skyline Enterprises): 7 payments, Total Rs 33,680.00 (PAY-250517-001 to PAY-250517-007)
-- User 12 (Metro Builders): 1 payment, Total Rs 50,000.00 (PAY-METRO-001)
-- User 7 (Aman): 0 payments, Total Rs 0.00
-- User 8 (Deep Amam): 0 payments, Total Rs 0.00
-- User 4 (Nihal): 0 payments, Total Rs 0.00
-- User 1 (Test User): 0 payments, Total Rs 0.00
-- Admin All Payments API (GET /api/payments): 14 payments total across all customers
-
-If request is sent without Bearer token or with invalid token, API returns:
+Unauthorized response without token:
 HTTP 401 Unauthorized
 {
   "detail": "Bearer token is compulsory. Please provide Authorization: Bearer <token>"
@@ -27,10 +14,10 @@ HTTP 401 Unauthorized
 
 ## 1. User Payment Dashboard (Summary Cards + Payment Transactions List)
 
-url : (http://192.168.1.59:8000/api/payments/dashboard)
+url : (http://192.168.1.54:8000/api/payments/dashboard)
 method : GET
 
-(Also supports http://192.168.1.59:8000/api/payments/user-dashboard)
+(Also supports http://192.168.1.54:8000/api/payments/user-dashboard)
 
 headers :- 
 
@@ -321,7 +308,7 @@ response (Logged in as User 11 - Skyline Enterprises - strictly 7 payments) :-
 
 When User 12 logs in with their token, they see strictly their 1 payment:
 
-url : (http://192.168.1.59:8000/api/payments/dashboard)
+url : (http://192.168.1.54:8000/api/payments/dashboard)
 method : GET
 
 headers :- 
@@ -403,7 +390,7 @@ response :-
 
 When a user with no payments logs in, the API returns count 0, Rs 0.00, and an empty payments array:
 
-url : (http://192.168.1.59:8000/api/payments/dashboard)
+url : (http://192.168.1.54:8000/api/payments/dashboard)
 method : GET
 
 headers :- 
@@ -447,10 +434,10 @@ response :-
 
 ## 4. Single Payment Details (On Tapping Payment Item / Action Arrow)
 
-url : (http://192.168.1.59:8000/api/payments/PAY-250517-001)
+url : (http://192.168.1.54:8000/api/payments/PAY-250517-001)
 method : GET
 
-(Also supports ID like http://192.168.1.59:8000/api/payments/11)
+(Also supports ID like http://192.168.1.54:8000/api/payments/11)
 
 headers :- 
 
@@ -500,7 +487,7 @@ response :-
 
 If User 7 or User 12 attempts to access User 11 payment (PAY-250517-001) by ID:
 
-url : (http://192.168.1.59:8000/api/payments/PAY-250517-001)
+url : (http://192.168.1.54:8000/api/payments/PAY-250517-001)
 method : GET
 
 headers :- 
@@ -520,7 +507,7 @@ HTTP 403 Forbidden
 
 If request is sent without Authorization header:
 
-url : (http://192.168.1.59:8000/api/payments/dashboard)
+url : (http://192.168.1.54:8000/api/payments/dashboard)
 method : GET
 
 headers :- 
