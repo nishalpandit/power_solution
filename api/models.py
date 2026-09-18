@@ -370,8 +370,13 @@ class Supplier(Base):
     mobile = Column(String(50), nullable=True)
     email = Column(String(120), nullable=True)
     address = Column(Text, nullable=True)
+    city = Column(String(100), nullable=True)
+    state = Column(String(100), nullable=True)
+    pincode = Column(String(20), nullable=True)
     gstin = Column(String(50), nullable=True)
+    pan_number = Column(String(50), nullable=True)
     payment_terms = Column(String(50), default="30 Days", nullable=True)
+    remarks = Column(Text, nullable=True)
 
     created_at = Column(DateTime, default=utc_now, nullable=False)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)

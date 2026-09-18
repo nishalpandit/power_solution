@@ -4,10 +4,10 @@ Base URL: http://192.168.1.54:8000/api
 Database Verification: db.sqlite3 (All responses below are verified against real database records)
 
 This documentation directly corresponds to the Flutter AddPurchaseOrderScreen and AddSupplierScreen workflows:
-1. Add new supplier first via AddSupplierScreen (POST /api/purchases/suppliers) with supplier name, contact person, mobile number, email, address, payment terms, and GSTIN.
+1. Add new supplier first via AddSupplierScreen (POST /api/purchases/suppliers) with supplier name, contact person, mobile number, email, address, city, state, pincode, payment terms, GSTIN, PAN number, and remarks/notes.
 2. Select supplier from dropdown in AddPurchaseOrderScreen (GET /api/purchases/suppliers).
 3. Contact person, mobile number, email, supplier address, and payment terms automatically populate into the form controllers upon selection. If custom, user can enter or modify them manually.
-4. Auto-generate or specify PO number, PO date, expected delivery date, payment terms, and status (Draft or Ordered).
+4. Auto-generate or specify PO number, PO date, expected delivery date, payment terms, reference, and status (Draft or Ordered).
 5. Add items from Product Master Picker (types, categories, products with specifications, price, qty, unit, gst).
 6. Live summary calculation for Sub Total, GST, and Grand Total (POST /api/purchases/calculate).
 7. Save as Draft or Place Purchase Order (POST /api/purchases).
@@ -72,8 +72,14 @@ response :-
       "phone": "9876543210",
       "email": "sales@abcelectrical.com",
       "address": "Industrial Area, Ahmedabad, Gujarat",
+      "city": null,
+      "state": null,
+      "pincode": null,
       "gstin": "24AAACP1234F1Z1",
-      "payment_terms": "30 Days"
+      "pan_number": null,
+      "payment_terms": "30 Days",
+      "remarks": null,
+      "notes": null
     },
     {
       "id": "SUP002",
@@ -87,8 +93,14 @@ response :-
       "phone": "9988776655",
       "email": "info@xyzpower.com",
       "address": "GIDC Estate, Vadodara, Gujarat",
+      "city": null,
+      "state": null,
+      "pincode": null,
       "gstin": "24AAACB5678K1Z2",
-      "payment_terms": "30 Days"
+      "pan_number": null,
+      "payment_terms": "30 Days",
+      "remarks": null,
+      "notes": null
     },
     {
       "id": "SUP003",
@@ -102,8 +114,14 @@ response :-
       "phone": "9998887776",
       "email": "purchase@powerequipment.in",
       "address": "Industrial Estate, Surat, Gujarat",
+      "city": null,
+      "state": null,
+      "pincode": null,
       "gstin": "24AAACP9012M1Z3",
-      "payment_terms": "30 Days"
+      "pan_number": null,
+      "payment_terms": "30 Days",
+      "remarks": null,
+      "notes": null
     },
     {
       "id": "SUP018",
@@ -117,8 +135,14 @@ response :-
       "phone": "9822114455",
       "email": "suresh@omkarelevators.in",
       "address": "Plot 42, Phase II, GIDC Naroda, Ahmedabad",
+      "city": "Ahmedabad",
+      "state": "Gujarat",
+      "pincode": "382330",
       "gstin": "24AABCO9988C1Z4",
-      "payment_terms": "30 Days"
+      "pan_number": "AABCO9988C",
+      "payment_terms": "30 Days",
+      "remarks": "Authorized OEM supplier for heavy duty lift components and traction motors",
+      "notes": "Authorized OEM supplier for heavy duty lift components and traction motors"
     }
   ],
   "product_types": [
@@ -136,7 +160,7 @@ response :-
 ## 2. Add New Supplier First (AddSupplierScreen)
 
 Used when the user taps the add button next to the supplier dropdown to create a new supplier first.
-Accepts supplier name, contact person, mobile number, email, address, payment terms, and GSTIN.
+Accepts supplier name, contact person, mobile number, email, address, city, state, pincode, payment terms, GSTIN, PAN number, and remarks/notes.
 Supports both application/json and multipart/form-data.
 
 url : (http://192.168.1.54:8000/api/purchases/suppliers)
@@ -152,13 +176,18 @@ Content-Type: application/json
 parameters :-
 
 supplier_name : string (Required) - Supplier company or business name. Alias: name
-contact_person : string (Optional) - Name of contact person. Alias: contact
-mobile : string (Optional) - Contact mobile number. Alias: phone
+contact_person : string (Optional) - Name of primary contact person. Alias: contact
+mobile : string (Optional) - Contact phone or mobile number. Alias: phone
 email : string (Optional) - Contact email address
-address : string (Optional) - Registered or factory address. Alias: supplier_address
+address : string (Optional) - Registered street or building address. Alias: supplier_address
+city : string (Optional) - City of supplier (e.g. Ahmedabad)
+state : string (Optional) - State of supplier (e.g. Gujarat)
+pincode : string (Optional) - Postal PIN code (e.g. 382330). Alias: pin
 payment_terms : string (Optional) - Default payment terms. Options: Advance, 15 Days, 30 Days, 45 Days, 60 Days, Against Delivery. Default: 30 Days
 gstin : string (Optional) - 15-digit GST identification number
-supplier_code : string (Optional) - Custom supplier code. If omitted, sequential code like SUP018 is auto-generated
+pan_number : string (Optional) - 10-digit PAN number (e.g. AABCO9988C). Alias: pan
+remarks : string (Optional) - Supplier remarks or special notes. Alias: notes
+supplier_code : string (Optional) - Custom supplier code (e.g. SUP018). If omitted, sequentially auto-generated
 
 body (JSON) :-
 
@@ -168,8 +197,13 @@ body (JSON) :-
   "mobile": "9822114455",
   "email": "suresh@omkarelevators.in",
   "address": "Plot 42, Phase II, GIDC Naroda, Ahmedabad",
+  "city": "Ahmedabad",
+  "state": "Gujarat",
+  "pincode": "382330",
   "payment_terms": "30 Days",
-  "gstin": "24AABCO9988C1Z4"
+  "gstin": "24AABCO9988C1Z4",
+  "pan_number": "AABCO9988C",
+  "remarks": "Authorized OEM supplier for heavy duty lift components and traction motors"
 }
 
 body (Multipart Form Data) :-
@@ -179,13 +213,18 @@ contact_person: Suresh Mehta
 mobile: 9822114455
 email: suresh@omkarelevators.in
 address: Plot 42, Phase II, GIDC Naroda, Ahmedabad
+city: Ahmedabad
+state: Gujarat
+pincode: 382330
 payment_terms: 30 Days
 gstin: 24AABCO9988C1Z4
+pan_number: AABCO9988C
+remarks: Authorized OEM supplier for heavy duty lift components and traction motors
 
 response (HTTP 201 Created) :-
 
 {
-  "message": "Supplier 'Omkar Elevators & Switchgears' created successfully",
+  "message": "Supplier 'Omkar Elevators & Switchgears' updated successfully",
   "supplier": {
     "id": "SUP018",
     "supplier_id": 18,
@@ -198,8 +237,14 @@ response (HTTP 201 Created) :-
     "phone": "9822114455",
     "email": "suresh@omkarelevators.in",
     "address": "Plot 42, Phase II, GIDC Naroda, Ahmedabad",
+    "city": "Ahmedabad",
+    "state": "Gujarat",
+    "pincode": "382330",
     "gstin": "24AABCO9988C1Z4",
-    "payment_terms": "30 Days"
+    "pan_number": "AABCO9988C",
+    "payment_terms": "30 Days",
+    "remarks": "Authorized OEM supplier for heavy duty lift components and traction motors",
+    "notes": "Authorized OEM supplier for heavy duty lift components and traction motors"
   }
 }
 
@@ -208,7 +253,7 @@ response (HTTP 201 Created) :-
 ## 3. Supplier Dropdown List (Select Supplier)
 
 Returns all suppliers stored in the database.
-Every supplier object includes id, name, contact, mobile, email, address, and payment terms matching Flutter controller keys.
+Every supplier object includes id, name, contact, mobile, email, address, city, state, pincode, GSTIN, PAN number, payment terms, and remarks matching Flutter controller keys.
 
 url : (http://192.168.1.54:8000/api/purchases/suppliers)
 method : GET
@@ -217,12 +262,12 @@ method : GET
 
 parameters :-
 
-search : string (Optional) - Filter suppliers by name, code, contact person, or phone number
+search : string (Optional) - Filter suppliers by name, code, contact person, mobile number, city, or state
 
 response :-
 
 {
-  "count": 18,
+  "count": 20,
   "suppliers": [
     {
       "id": "SUP001",
@@ -236,8 +281,14 @@ response :-
       "phone": "9876543210",
       "email": "sales@abcelectrical.com",
       "address": "Industrial Area, Ahmedabad, Gujarat",
+      "city": null,
+      "state": null,
+      "pincode": null,
       "gstin": "24AAACP1234F1Z1",
-      "payment_terms": "30 Days"
+      "pan_number": null,
+      "payment_terms": "30 Days",
+      "remarks": null,
+      "notes": null
     },
     {
       "id": "SUP002",
@@ -251,8 +302,14 @@ response :-
       "phone": "9988776655",
       "email": "info@xyzpower.com",
       "address": "GIDC Estate, Vadodara, Gujarat",
+      "city": null,
+      "state": null,
+      "pincode": null,
       "gstin": "24AAACB5678K1Z2",
-      "payment_terms": "30 Days"
+      "pan_number": null,
+      "payment_terms": "30 Days",
+      "remarks": null,
+      "notes": null
     },
     {
       "id": "SUP003",
@@ -266,8 +323,14 @@ response :-
       "phone": "9998887776",
       "email": "purchase@powerequipment.in",
       "address": "Industrial Estate, Surat, Gujarat",
+      "city": null,
+      "state": null,
+      "pincode": null,
       "gstin": "24AAACP9012M1Z3",
-      "payment_terms": "30 Days"
+      "pan_number": null,
+      "payment_terms": "30 Days",
+      "remarks": null,
+      "notes": null
     },
     {
       "id": "SUP018",
@@ -281,8 +344,14 @@ response :-
       "phone": "9822114455",
       "email": "suresh@omkarelevators.in",
       "address": "Plot 42, Phase II, GIDC Naroda, Ahmedabad",
+      "city": "Ahmedabad",
+      "state": "Gujarat",
+      "pincode": "382330",
       "gstin": "24AABCO9988C1Z4",
-      "payment_terms": "30 Days"
+      "pan_number": "AABCO9988C",
+      "payment_terms": "30 Days",
+      "remarks": "Authorized OEM supplier for heavy duty lift components and traction motors",
+      "notes": "Authorized OEM supplier for heavy duty lift components and traction motors"
     }
   ]
 }
@@ -449,6 +518,7 @@ items : array of objects (Required) - List of added products. Each product objec
 - sku : string (Optional) - Product SKU code
 - type : string (Optional) - Product type
 - category : string (Optional) - Product category
+- specifications : object (Optional) - Technical specifications dictionary
 
 body :-
 
@@ -485,7 +555,7 @@ Handles:
 - Order details: po_number, po_date, expected_delivery, payment_terms, reference, status (Draft or Ordered)
 - Full item array with technical specifications, price, quantity, and GST
 - Sub Total, GST Total, and Grand Total (auto-calculated from items if omitted)
-- Additional notes and instructions
+- Additional notes, remarks, and instructions
 - Supports both application/json and multipart/form-data.
 
 url : (http://192.168.1.54:8000/api/purchases)
@@ -516,7 +586,7 @@ reference : string (Optional) - Customer or order reference (e.g. REF-OCT-2025)
 subtotal : float (Optional) - Subtotal amount before GST. Auto-calculated if omitted
 gst_total : float (Optional) - Total GST tax amount. Auto-calculated if omitted
 grand_total : float (Optional) - Final order total. Auto-calculated if omitted
-notes : string (Optional) - Purchase order notes and instructions
+notes : string (Optional) - Purchase order notes, remarks, or special instructions. Alias: remarks
 
 body (JSON - Save as Draft Example) :-
 
@@ -687,6 +757,7 @@ response (HTTP 201 Created) :-
     "formatted_gst_total": "Rs 70,200.00",
     "formatted_grand_total": "Rs 4,60,200.00",
     "notes": "Urgent requirement for Site A",
+    "remarks": "Urgent requirement for Site A",
     "created_at": "2026-09-18T11:28:29.824349",
     "updated_at": "2026-09-18T11:28:29.824352"
   },
@@ -743,6 +814,7 @@ response (HTTP 201 Created) :-
     "formatted_gst_total": "Rs 70,200.00",
     "formatted_grand_total": "Rs 4,60,200.00",
     "notes": "Urgent requirement for Site A",
+    "remarks": "Urgent requirement for Site A",
     "created_at": "2026-09-18T11:28:29.824349",
     "updated_at": "2026-09-18T11:28:29.824352"
   }
@@ -816,6 +888,7 @@ response (Verified from db.sqlite3 record ID 11) :-
   "formatted_gst_total": "Rs 70,200.00",
   "formatted_grand_total": "Rs 4,60,200.00",
   "notes": "",
+  "remarks": "",
   "created_at": "2026-09-18T11:25:02.972451",
   "updated_at": "2026-09-18T11:25:02.972454"
 }
@@ -881,7 +954,8 @@ response :-
       "formatted_subtotal": "Rs 3,90,000.00",
       "formatted_gst_total": "Rs 70,200.00",
       "formatted_grand_total": "Rs 4,60,200.00",
-      "notes": "Approved by GM"
+      "notes": "Approved by GM",
+      "remarks": "Approved by GM"
     }
   ]
 }
@@ -890,7 +964,7 @@ response :-
 
 ## 9. Update Purchase Order Status or Details
 
-Supports updating po_status (Draft, Pending, Approved, Ordered, Received, Cancelled), expected delivery date, payment terms, reference, contact details, items, or notes.
+Supports updating po_status (Draft, Pending, Approved, Ordered, Received, Cancelled), expected delivery date, payment terms, reference, contact details, items, notes, or remarks.
 Lookup by string PO number or integer ID.
 
 url : (http://192.168.1.54:8000/api/purchases/PO-250517-0002)
@@ -913,7 +987,7 @@ contact_person : string (Optional) - Updated contact person name. Alias: contact
 mobile : string (Optional) - Updated mobile number. Alias: phone
 email : string (Optional) - Updated email address
 address : string (Optional) - Updated address
-notes : string (Optional) - Updated notes / instructions
+notes : string (Optional) - Updated notes / instructions. Alias: remarks
 items : array of objects (Optional) - Updated product items array (recalculates subtotal, gst, grand_total automatically)
 
 body :-
@@ -950,7 +1024,8 @@ response :-
     "subtotal": 390000.0,
     "gst_total": 70200.0,
     "grand_total": 460200.0,
-    "notes": "Approved by GM"
+    "notes": "Approved by GM",
+    "remarks": "Approved by GM"
   },
   "po": {
     "id": 12,
@@ -975,7 +1050,8 @@ response :-
     "subtotal": 390000.0,
     "gst_total": 70200.0,
     "grand_total": 460200.0,
-    "notes": "Approved by GM"
+    "notes": "Approved by GM",
+    "remarks": "Approved by GM"
   }
 }
 

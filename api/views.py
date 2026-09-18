@@ -3781,8 +3781,14 @@ def format_supplier_response(supplier: Supplier) -> dict:
         "phone": supplier.mobile,
         "email": supplier.email,
         "address": supplier.address,
+        "city": getattr(supplier, "city", None),
+        "state": getattr(supplier, "state", None),
+        "pincode": getattr(supplier, "pincode", None),
         "gstin": supplier.gstin,
+        "pan_number": getattr(supplier, "pan_number", None),
         "payment_terms": getattr(supplier, "payment_terms", None) or "30 Days",
+        "remarks": getattr(supplier, "remarks", None),
+        "notes": getattr(supplier, "remarks", None),
     }
 
 
@@ -3815,6 +3821,7 @@ def format_po_response(po: PurchaseOrder) -> dict:
         "formatted_gst_total": format_currency_inr(po.gst_total or 0.0),
         "formatted_grand_total": format_currency_inr(po.grand_total or 0.0),
         "notes": po.notes,
+        "remarks": po.notes,
         "created_at": po.created_at.isoformat() if po.created_at else None,
         "updated_at": po.updated_at.isoformat() if po.updated_at else None,
     }
@@ -3846,6 +3853,8 @@ def list_suppliers(
                 Supplier.supplier_code.ilike(pat),
                 Supplier.contact_person.ilike(pat),
                 Supplier.mobile.ilike(pat),
+                Supplier.city.ilike(pat),
+                Supplier.state.ilike(pat),
             )
         )
     suppliers = query.order_by(Supplier.id.asc()).all()
@@ -3873,8 +3882,13 @@ async def create_supplier(
     mobile = str(payload.get("mobile") or payload.get("phone") or "").strip() or None
     email = str(payload.get("email") or "").strip() or None
     address = str(payload.get("address") or payload.get("supplier_address") or "").strip() or None
+    city = str(payload.get("city") or "").strip() or None
+    state_val = str(payload.get("state") or "").strip() or None
+    pincode = str(payload.get("pincode") or payload.get("pin") or "").strip() or None
     gstin = str(payload.get("gstin") or "").strip() or None
+    pan_number = str(payload.get("pan_number") or payload.get("pan") or "").strip() or None
     payment_terms = str(payload.get("payment_terms") or "30 Days").strip()
+    remarks = str(payload.get("remarks") or payload.get("notes") or "").strip() or None
 
     supplier_code = str(payload.get("supplier_code") or "").strip()
     if not supplier_code:
@@ -3896,10 +3910,20 @@ async def create_supplier(
                 existing.email = email
             if address:
                 existing.address = address
+            if city:
+                existing.city = city
+            if state_val:
+                existing.state = state_val
+            if pincode:
+                existing.pincode = pincode
             if gstin:
                 existing.gstin = gstin
+            if pan_number:
+                existing.pan_number = pan_number
             if payment_terms:
                 existing.payment_terms = payment_terms
+            if remarks:
+                existing.remarks = remarks
             db.commit()
             db.refresh(existing)
             return {
@@ -3914,8 +3938,13 @@ async def create_supplier(
         mobile=mobile,
         email=email,
         address=address,
+        city=city,
+        state=state_val,
+        pincode=pincode,
         gstin=gstin,
+        pan_number=pan_number,
         payment_terms=payment_terms,
+        remarks=remarks,
     )
     db.add(supplier)
     db.commit()
