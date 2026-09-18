@@ -189,3 +189,16 @@ def ensure_database_schema():
                 connection.exec_driver_sql("ALTER TABLE payments ADD COLUMN category VARCHAR(100)")
             if "payment_time" not in pay_cols:
                 connection.exec_driver_sql("ALTER TABLE payments ADD COLUMN payment_time VARCHAR(50)")
+
+        # Check and migrate quotations columns
+        qtn_table = connection.exec_driver_sql(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='quotations'"
+        ).fetchone()
+        if qtn_table:
+            qtn_cols = {col[1] for col in connection.exec_driver_sql("PRAGMA table_info(quotations)").fetchall()}
+            if "user_id" not in qtn_cols:
+                connection.exec_driver_sql("ALTER TABLE quotations ADD COLUMN user_id INTEGER REFERENCES users(id)")
+            if "category" not in qtn_cols:
+                connection.exec_driver_sql("ALTER TABLE quotations ADD COLUMN category VARCHAR(100) DEFAULT 'Lift'")
+            if "quotation_time" not in qtn_cols:
+                connection.exec_driver_sql("ALTER TABLE quotations ADD COLUMN quotation_time VARCHAR(50) DEFAULT '10:30 AM'")

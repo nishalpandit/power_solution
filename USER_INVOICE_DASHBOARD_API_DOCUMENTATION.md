@@ -2,7 +2,7 @@
 
 Bearer token is compulsory for all endpoints.
 The user is automatically identified from the Bearer token.
-The backend returns ONLY invoices belonging to that logged-in user.
+The backend returns only invoices belonging to that logged-in user.
 No user_id, phone, email, or customer_name parameters are needed.
 
 If request is sent without Bearer token or with invalid token, API returns:
@@ -22,9 +22,18 @@ method : GET
 
 headers :- 
 
-Authorization: Bearer <user_login_token> (Required)
+Authorization: Bearer <user_login_token> (Compulsory)
 
-response (Logged in as User 11 - Skyline Enterprises) :- 
+params :- 
+
+(None required)
+
+Optional Filter Parameters:
+search:Lift (optional - searches within user invoices)
+status:Paid (optional - filter by Paid, Partially Paid, Unpaid)
+category:Lift (optional - filter by Lift, Generator, Panel, Earthing)
+
+response :- 
 
 {
   "summary": {
@@ -160,7 +169,7 @@ response (Logged in as User 11 - Skyline Enterprises) :-
       "balance_due": 501500.0,
       "notes": "Original invoice generated from mobile Create Invoice screen",
       "created_at": "2026-09-17T10:42:28.735129",
-      "updated_at": "2026-09-17T12:24:51.557369"
+      "updated_at": "2026-09-17T10:42:28.735135"
     }
   ],
   "service_invoices": [
@@ -215,166 +224,6 @@ response (Logged in as User 11 - Skyline Enterprises) :-
       "updated_at": "2026-09-17T11:51:40.937100"
     }
   ],
-  "all_invoices": [
-    {
-      "id": 8,
-      "invoice_no": "SV-250517-001",
-      "category": "Lift",
-      "invoice_type": "Service",
-      "invoice_date": "17 May 2025",
-      "date": "17 May 2025",
-      "due_date": "27 May 2025",
-      "due": "27 May 2025",
-      "amount": 3250.0,
-      "formatted_amount": "Rs 3,250.00",
-      "status": "Paid",
-      "status_color": "green",
-      "user_id": 11,
-      "order_id": null,
-      "order_no": null,
-      "quotation_id": null,
-      "quotation_no": null,
-      "customer_name": "Demo Customer",
-      "phone": "",
-      "email": "",
-      "billing_address": "",
-      "delivery_address": "",
-      "customer": {
-        "name": "Demo Customer",
-        "phone": "",
-        "email": "",
-        "billing_address": "",
-        "delivery_address": ""
-      },
-      "payment_terms": "30 Days",
-      "reference_no": "",
-      "items": [
-        {
-          "name": "Lift Item",
-          "category": "Lift",
-          "total": 3250.0
-        }
-      ],
-      "subtotal": 3250.0,
-      "discount": 0.0,
-      "tax_percent": 18.0,
-      "tax": 0.0,
-      "grand_total": 3250.0,
-      "amount_paid": 0.0,
-      "balance_due": 0.0,
-      "notes": "",
-      "created_at": "2026-09-17T11:33:50.107775",
-      "updated_at": "2026-09-17T11:51:40.937100"
-    },
-    {
-      "id": 4,
-      "invoice_no": "SI-250517-001",
-      "category": "Lift",
-      "invoice_type": "Sales",
-      "invoice_date": "17 May 2025",
-      "date": "17 May 2025",
-      "due_date": "27 May 2025",
-      "due": "27 May 2025",
-      "amount": 4560.0,
-      "formatted_amount": "Rs 4,560.00",
-      "status": "Paid",
-      "status_color": "green",
-      "user_id": 11,
-      "order_id": null,
-      "order_no": null,
-      "quotation_id": null,
-      "quotation_no": null,
-      "customer_name": "Demo Customer",
-      "phone": "",
-      "email": "",
-      "billing_address": "",
-      "delivery_address": "",
-      "customer": {
-        "name": "Demo Customer",
-        "phone": "",
-        "email": "",
-        "billing_address": "",
-        "delivery_address": ""
-      },
-      "payment_terms": "30 Days",
-      "reference_no": "",
-      "items": [
-        {
-          "name": "Lift Item",
-          "category": "Lift",
-          "total": 4560.0
-        }
-      ],
-      "subtotal": 4560.0,
-      "discount": 0.0,
-      "tax_percent": 18.0,
-      "tax": 0.0,
-      "grand_total": 4560.0,
-      "amount_paid": 0.0,
-      "balance_due": 0.0,
-      "notes": "",
-      "created_at": "2026-09-17T11:33:50.107760",
-      "updated_at": "2026-09-17T11:51:40.930547"
-    },
-    {
-      "id": 1,
-      "invoice_no": "INV-260912-0001",
-      "category": "Lift",
-      "invoice_type": "Sales",
-      "invoice_date": "12 Sep 2026",
-      "date": "12 Sep 2026",
-      "due_date": "12 Oct 2026",
-      "due": "12 Oct 2026",
-      "amount": 501500.0,
-      "formatted_amount": "Rs 5,01,500.00",
-      "status": "Unpaid",
-      "status_color": "red",
-      "user_id": 11,
-      "order_id": 1,
-      "order_no": "ORD-260912-0001",
-      "quotation_id": null,
-      "quotation_no": "QTN-250517-0001",
-      "customer_name": "Skyline Enterprises",
-      "phone": "+91 9876543210",
-      "email": "contact@skyline.com",
-      "billing_address": "45 Industrial Area, Phase 2, New Delhi",
-      "delivery_address": "45 Industrial Area, Phase 2, New Delhi",
-      "customer": {
-        "name": "Skyline Enterprises",
-        "phone": "+91 9876543210",
-        "email": "contact@skyline.com",
-        "billing_address": "45 Industrial Area, Phase 2, New Delhi",
-        "delivery_address": "45 Industrial Area, Phase 2, New Delhi"
-      },
-      "payment_terms": "30 Days",
-      "reference_no": "REF-SKY-001",
-      "items": [
-        {
-          "id": "ITEM001",
-          "name": "G+2 Automatic Passenger Lift",
-          "code": "LIFT001",
-          "category": "Passenger Lift",
-          "qty": 1.0,
-          "rate": 450000.0,
-          "discount": 25000.0,
-          "tax_percent": 18.0,
-          "tax": 76500.0,
-          "total": 450000.0,
-          "specifications": {}
-        }
-      ],
-      "subtotal": 450000.0,
-      "discount": 25000.0,
-      "tax_percent": 18.0,
-      "tax": 76500.0,
-      "grand_total": 501500.0,
-      "amount_paid": 0.0,
-      "balance_due": 501500.0,
-      "notes": "Original invoice generated from mobile Create Invoice screen",
-      "created_at": "2026-09-17T10:42:28.735129",
-      "updated_at": "2026-09-17T12:24:51.557369"
-    }
-  ],
   "count": 3
 }
 
@@ -387,7 +236,16 @@ method : GET
 
 headers :- 
 
-Authorization: Bearer <user_login_token> (Required)
+Authorization: Bearer <user_login_token> (Compulsory)
+
+params :- 
+
+(None required)
+
+Optional Filter Parameters:
+search:Lift (optional)
+status:Paid (optional)
+category:Lift (optional)
 
 response :- 
 
@@ -525,118 +383,7 @@ response :-
       "balance_due": 501500.0,
       "notes": "Original invoice generated from mobile Create Invoice screen",
       "created_at": "2026-09-17T10:42:28.735129",
-      "updated_at": "2026-09-17T12:24:51.557369"
-    }
-  ],
-  "service_invoices": [],
-  "all_invoices": [
-    {
-      "id": 4,
-      "invoice_no": "SI-250517-001",
-      "category": "Lift",
-      "invoice_type": "Sales",
-      "invoice_date": "17 May 2025",
-      "date": "17 May 2025",
-      "due_date": "27 May 2025",
-      "due": "27 May 2025",
-      "amount": 4560.0,
-      "formatted_amount": "Rs 4,560.00",
-      "status": "Paid",
-      "status_color": "green",
-      "user_id": 11,
-      "order_id": null,
-      "order_no": null,
-      "quotation_id": null,
-      "quotation_no": null,
-      "customer_name": "Demo Customer",
-      "phone": "",
-      "email": "",
-      "billing_address": "",
-      "delivery_address": "",
-      "customer": {
-        "name": "Demo Customer",
-        "phone": "",
-        "email": "",
-        "billing_address": "",
-        "delivery_address": ""
-      },
-      "payment_terms": "30 Days",
-      "reference_no": "",
-      "items": [
-        {
-          "name": "Lift Item",
-          "category": "Lift",
-          "total": 4560.0
-        }
-      ],
-      "subtotal": 4560.0,
-      "discount": 0.0,
-      "tax_percent": 18.0,
-      "tax": 0.0,
-      "grand_total": 4560.0,
-      "amount_paid": 0.0,
-      "balance_due": 0.0,
-      "notes": "",
-      "created_at": "2026-09-17T11:33:50.107760",
-      "updated_at": "2026-09-17T11:51:40.930547"
-    },
-    {
-      "id": 1,
-      "invoice_no": "INV-260912-0001",
-      "category": "Lift",
-      "invoice_type": "Sales",
-      "invoice_date": "12 Sep 2026",
-      "date": "12 Sep 2026",
-      "due_date": "12 Oct 2026",
-      "due": "12 Oct 2026",
-      "amount": 501500.0,
-      "formatted_amount": "Rs 5,01,500.00",
-      "status": "Unpaid",
-      "status_color": "red",
-      "user_id": 11,
-      "order_id": 1,
-      "order_no": "ORD-260912-0001",
-      "quotation_id": null,
-      "quotation_no": "QTN-250517-0001",
-      "customer_name": "Skyline Enterprises",
-      "phone": "+91 9876543210",
-      "email": "contact@skyline.com",
-      "billing_address": "45 Industrial Area, Phase 2, New Delhi",
-      "delivery_address": "45 Industrial Area, Phase 2, New Delhi",
-      "customer": {
-        "name": "Skyline Enterprises",
-        "phone": "+91 9876543210",
-        "email": "contact@skyline.com",
-        "billing_address": "45 Industrial Area, Phase 2, New Delhi",
-        "delivery_address": "45 Industrial Area, Phase 2, New Delhi"
-      },
-      "payment_terms": "30 Days",
-      "reference_no": "REF-SKY-001",
-      "items": [
-        {
-          "id": "ITEM001",
-          "name": "G+2 Automatic Passenger Lift",
-          "code": "LIFT001",
-          "category": "Passenger Lift",
-          "qty": 1.0,
-          "rate": 450000.0,
-          "discount": 25000.0,
-          "tax_percent": 18.0,
-          "tax": 76500.0,
-          "total": 450000.0,
-          "specifications": {}
-        }
-      ],
-      "subtotal": 450000.0,
-      "discount": 25000.0,
-      "tax_percent": 18.0,
-      "tax": 76500.0,
-      "grand_total": 501500.0,
-      "amount_paid": 0.0,
-      "balance_due": 501500.0,
-      "notes": "Original invoice generated from mobile Create Invoice screen",
-      "created_at": "2026-09-17T10:42:28.735129",
-      "updated_at": "2026-09-17T12:24:51.557369"
+      "updated_at": "2026-09-17T10:42:28.735135"
     }
   ],
   "count": 2
@@ -651,7 +398,16 @@ method : GET
 
 headers :- 
 
-Authorization: Bearer <user_login_token> (Required)
+Authorization: Bearer <user_login_token> (Compulsory)
+
+params :- 
+
+(None required)
+
+Optional Filter Parameters:
+search:Lift (optional)
+status:Paid (optional)
+category:Lift (optional)
 
 response :- 
 
@@ -735,58 +491,6 @@ response :-
       "updated_at": "2026-09-17T11:51:40.937100"
     }
   ],
-  "all_invoices": [
-    {
-      "id": 8,
-      "invoice_no": "SV-250517-001",
-      "category": "Lift",
-      "invoice_type": "Service",
-      "invoice_date": "17 May 2025",
-      "date": "17 May 2025",
-      "due_date": "27 May 2025",
-      "due": "27 May 2025",
-      "amount": 3250.0,
-      "formatted_amount": "Rs 3,250.00",
-      "status": "Paid",
-      "status_color": "green",
-      "user_id": 11,
-      "order_id": null,
-      "order_no": null,
-      "quotation_id": null,
-      "quotation_no": null,
-      "customer_name": "Demo Customer",
-      "phone": "",
-      "email": "",
-      "billing_address": "",
-      "delivery_address": "",
-      "customer": {
-        "name": "Demo Customer",
-        "phone": "",
-        "email": "",
-        "billing_address": "",
-        "delivery_address": ""
-      },
-      "payment_terms": "30 Days",
-      "reference_no": "",
-      "items": [
-        {
-          "name": "Lift Item",
-          "category": "Lift",
-          "total": 3250.0
-        }
-      ],
-      "subtotal": 3250.0,
-      "discount": 0.0,
-      "tax_percent": 18.0,
-      "tax": 0.0,
-      "grand_total": 3250.0,
-      "amount_paid": 0.0,
-      "balance_due": 0.0,
-      "notes": "",
-      "created_at": "2026-09-17T11:33:50.107775",
-      "updated_at": "2026-09-17T11:51:40.937100"
-    }
-  ],
   "count": 1
 }
 
@@ -801,7 +505,11 @@ method : GET
 
 headers :- 
 
-Authorization: Bearer <user_login_token> (Required)
+Authorization: Bearer <user_login_token> (Compulsory)
+
+params :- 
+
+(None)
 
 response :- 
 

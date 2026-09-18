@@ -16,7 +16,7 @@ response :-
   "receipt_date": "15 Sep 2026"
 }
 
----
+
 
 ## 2. Supplier Dropdown (Select Supplier)
 

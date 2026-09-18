@@ -109,7 +109,15 @@ class Quotation(Base):
     quotation_no = Column(String(60), unique=True, index=True, nullable=False)
     quotation_date = Column(String(50), nullable=False)
     valid_till = Column(String(50), nullable=False)
+    quotation_time = Column(String(50), default="10:30 AM", nullable=True)
     reference = Column(String(100), nullable=True)
+
+    # Classification
+    category = Column(String(100), default="Lift", nullable=True)
+
+    # Linked User / Customer Account
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    user = relationship("User", backref="quotations", foreign_keys=[user_id])
 
     # Customer Details (Input fields as requested by user)
     customer_name = Column(String(150), nullable=False, index=True)

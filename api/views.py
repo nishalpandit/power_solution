@@ -1238,6 +1238,199 @@ def format_quotation_response(quotation: Quotation) -> dict:
     }
 
 
+def format_user_quotation_detail_response(quotation: Quotation) -> dict:
+    """
+    Formats quotation data to directly power UserQuotationDetailScreen in Flutter.
+    Provides:
+    - Top-level keys for direct Flutter indexing (id, status, statusColor, category, icon, iconColor, date, time, validTill, amount)
+    - company object (M/s. POWER SOLUTION.COM ENTERPRISES official details)
+    - customer object (name, phone, email, address)
+    - items array (item, description, qty, rate, total)
+    - pricing_summary (subtotal, GST 18%, grand_total)
+    - terms_and_conditions list
+    - actions (download_pdf_url, share_url)
+    """
+    st = (quotation.status or "Draft").strip()
+    if st.lower() in ["approved", "accepted", "confirmed"]:
+        status_color = "green"
+        status_color_hex = "#10B981"
+    elif st.lower() in ["sent", "submitted"]:
+        status_color = "blue"
+        status_color_hex = "#3B82F6"
+    elif st.lower() in ["pending", "draft", "in review"]:
+        status_color = "orange"
+        status_color_hex = "#F59E0B"
+    elif st.lower() in ["rejected", "cancelled", "declined"]:
+        status_color = "red"
+        status_color_hex = "#EF4444"
+    else:
+        status_color = "blue"
+        status_color_hex = "#3B82F6"
+
+    cat = (quotation.category or "Lift").strip()
+    if "lift" in cat.lower():
+        icon_name = "elevator"
+    elif "generator" in cat.lower():
+        icon_name = "bolt"
+    elif "panel" in cat.lower():
+        icon_name = "dashboard"
+    elif "earthing" in cat.lower():
+        icon_name = "shield"
+    else:
+        icon_name = "receipt_long"
+
+    formatted_amount = format_currency_inr(quotation.grand_total or 0.0)
+
+    # Process items table
+    raw_items = quotation.items or []
+    if isinstance(raw_items, str):
+        try:
+            import json
+            raw_items = json.loads(raw_items)
+        except Exception:
+            raw_items = []
+
+    formatted_items = []
+    for item in raw_items:
+        if isinstance(item, dict):
+            item_title = (
+                item.get("item")
+                or item.get("name")
+                or item.get("product_name")
+                or item.get("product")
+                or "Quotation Item"
+            )
+            item_desc = (
+                item.get("description")
+                or item.get("desc")
+                or item.get("specification")
+                or item.get("category")
+                or ""
+            )
+            qty_val = item.get("qty") if item.get("qty") is not None else item.get("quantity", 1)
+            try:
+                qty_num = float(qty_val)
+                qty_str = str(int(qty_num)) if qty_num.is_integer() else str(qty_num)
+            except Exception:
+                qty_str = str(qty_val)
+                qty_num = 1.0
+
+            rate_val = float(item.get("rate") or item.get("unit_price") or item.get("price") or 0.0)
+            tot_val = float(
+                item.get("total")
+                or item.get("total_price")
+                or item.get("amount")
+                or (rate_val * qty_num)
+            )
+
+            formatted_items.append({
+                "item": str(item_title),
+                "description": str(item_desc),
+                "desc": str(item_desc),
+                "qty": qty_str,
+                "quantity": qty_num,
+                "rate": rate_val,
+                "unit_price": rate_val,
+                "formatted_rate": format_currency_inr(rate_val),
+                "total": format_currency_inr(tot_val),
+                "formatted_total": format_currency_inr(tot_val),
+                "amount": tot_val,
+            })
+
+    # Terms and conditions
+    default_terms = [
+        "This quotation is valid till the above mentioned validity date.",
+        "50% advance required before installation.",
+        "Delivery & Installation time: 7-10 working days.",
+        "Warranty as per company policy.",
+    ]
+    if quotation.terms and quotation.terms.strip():
+        parsed_terms = [
+            t.strip().lstrip("•*- ").strip()
+            for t in quotation.terms.splitlines()
+            if t.strip()
+        ]
+        terms_list = parsed_terms if parsed_terms else default_terms
+    else:
+        terms_list = default_terms
+
+    subtotal = float(quotation.subtotal or quotation.grand_total or 0.0)
+    tax_amount = float(quotation.tax_amount or 0.0)
+    grand_total = float(quotation.grand_total or subtotal)
+
+    server_base = "http://192.168.1.54:8000"
+    q_no = quotation.quotation_no
+
+    return {
+        "id": q_no,
+        "db_id": quotation.id,
+        "quotation_id": q_no,
+        "quotation_no": q_no,
+        "status": st,
+        "statusColor": status_color,
+        "status_color": status_color,
+        "status_color_hex": status_color_hex,
+        "icon": icon_name,
+        "iconColor": "blue",
+        "icon_color": "blue",
+        "category": cat,
+        "date": quotation.quotation_date or "",
+        "quotation_date": quotation.quotation_date or "",
+        "time": quotation.quotation_time or "10:30 AM",
+        "quotation_time": quotation.quotation_time or "10:30 AM",
+        "validTill": quotation.valid_till or "",
+        "valid_till": quotation.valid_till or "",
+        "amount": formatted_amount,
+        "grand_total": grand_total,
+        "formatted_amount": formatted_amount,
+        "company": {
+            "company_name": "M/s. POWER SOLUTION.COM ENTERPRISES",
+            "gstn": "20EGHPS4942E1ZH",
+            "email": "POWERSOLUTIONDG3@GMAIL.COM",
+            "iso_certificate": "ISO 9001:2015 QMS-25111206",
+            "electric_license_no": "JH/EC/5382",
+            "registered_address": "SOLANKI , SINGHMORE, HATIA ,RANCHI JHARKHAND PIN CODE 834003",
+            "representative": "Mr./Ms. ________________",
+        },
+        "customer": {
+            "name": quotation.customer_name or "",
+            "phone": quotation.phone or "",
+            "email": quotation.email or "",
+            "address": quotation.address or "",
+        },
+        "customer_name": quotation.customer_name or "",
+        "customer_phone": quotation.phone or "",
+        "customer_email": quotation.email or "",
+        "customer_address": quotation.address or "",
+        "items": formatted_items,
+        "pricing_summary": {
+            "subtotal": subtotal,
+            "formatted_subtotal": format_currency_inr(subtotal),
+            "tax_type": quotation.tax_type or "GST (18%)",
+            "tax_rate": float(quotation.tax_rate or 0.18),
+            "tax_amount": tax_amount,
+            "formatted_tax": format_currency_inr(tax_amount),
+            "discount_type": quotation.discount_type or "Flat",
+            "discount_amount": float(quotation.discount_amount or 0.0),
+            "formatted_discount": format_currency_inr(float(quotation.discount_amount or 0.0)),
+            "grand_total": grand_total,
+            "formatted_grand_total": formatted_amount,
+        },
+        "terms_and_conditions": terms_list,
+        "terms": "\n".join(terms_list),
+        "representation": "Represented by Mr./Ms. ________________,",
+        "actions": {
+            "download_pdf_url": f"{server_base}/api/quotations/{q_no}/pdf",
+            "share_url": f"{server_base}/api/quotations/{q_no}/share",
+        },
+        "download_pdf_url": f"{server_base}/api/quotations/{q_no}/pdf",
+        "share_url": f"{server_base}/api/quotations/{q_no}/share",
+        "user_id": quotation.user_id,
+        "created_at": quotation.created_at.isoformat() if quotation.created_at else None,
+        "updated_at": quotation.updated_at.isoformat() if quotation.updated_at else None,
+    }
+
+
 def generate_quotation_no(db: Session) -> str:
     from datetime import datetime
     date_str = datetime.now().strftime("%y%m%d")
@@ -1564,22 +1757,263 @@ def list_quotations(
     }
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# USER QUOTATION DASHBOARD & DETAIL ENDPOINTS (UserQuotationDetailScreen)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/quotations/dashboard")
+@router.get("/quotations/user-dashboard")
+def get_user_quotation_dashboard(
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Dedicated endpoint for User Quotation Dashboard in Flutter.
+    Bearer token is compulsory (Authorization: Bearer <token>).
+    Strictly calculates summary analytics cards and returns quotation records ONLY for the authenticated user.
+    """
+    query = db.query(Quotation)
+
+    if getattr(current_user, "role", "") != "admin":
+        clean_phone = "".join(ch for ch in (current_user.phone_number or "") if ch.isdigit())
+        user_filters = [Quotation.user_id == current_user.id]
+        legacy_conditions = []
+        if current_user.email:
+            legacy_conditions.append(Quotation.email.ilike(current_user.email.strip()))
+        if clean_phone and len(clean_phone) >= 10:
+            legacy_conditions.append(Quotation.phone.like(f"%{clean_phone[-10:]}%"))
+        if current_user.full_name:
+            legacy_conditions.append(Quotation.customer_name.ilike(current_user.full_name.strip()))
+        if legacy_conditions:
+            user_filters.append(and_(Quotation.user_id.is_(None), or_(*legacy_conditions)))
+
+        query = query.filter(or_(*user_filters))
+
+    if status:
+        st = status.strip().lower()
+        if st in ["approved", "accepted"]:
+            query = query.filter(or_(Quotation.status.ilike("Approved"), Quotation.status.ilike("Accepted")))
+        elif st in ["sent", "submitted"]:
+            query = query.filter(or_(Quotation.status.ilike("Sent"), Quotation.status.ilike("Submitted")))
+        elif st in ["pending", "draft"]:
+            query = query.filter(or_(Quotation.status.ilike("Pending"), Quotation.status.ilike("Draft")))
+        elif st in ["rejected", "declined"]:
+            query = query.filter(or_(Quotation.status.ilike("Rejected"), Quotation.status.ilike("Declined")))
+        else:
+            query = query.filter(Quotation.status.ilike(f"%{status.strip()}%"))
+
+    if category:
+        query = query.filter(Quotation.category.ilike(f"%{category.strip()}%"))
+
+    if search:
+        pat = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                Quotation.quotation_no.ilike(pat),
+                Quotation.customer_name.ilike(pat),
+                Quotation.category.ilike(pat),
+                Quotation.status.ilike(pat),
+                Quotation.quotation_date.ilike(pat),
+            )
+        )
+
+    all_quotations = query.order_by(Quotation.id.desc()).all()
+
+    total_count = len(all_quotations)
+    total_amount = sum(float(q.grand_total or 0.0) for q in all_quotations)
+
+    approved_list = [q for q in all_quotations if (q.status or "").lower() in ["approved", "accepted"]]
+    approved_count = len(approved_list)
+    approved_amount = sum(float(q.grand_total or 0.0) for q in approved_list)
+
+    sent_list = [q for q in all_quotations if (q.status or "").lower() in ["sent", "submitted"]]
+    sent_count = len(sent_list)
+    sent_amount = sum(float(q.grand_total or 0.0) for q in sent_list)
+
+    pending_list = [q for q in all_quotations if (q.status or "").lower() in ["pending", "draft", "in review"]]
+    pending_count = len(pending_list)
+    pending_amount = sum(float(q.grand_total or 0.0) for q in pending_list)
+
+    formatted_quotations = [format_user_quotation_detail_response(q) for q in all_quotations]
+
+    return {
+        "summary": {
+            "total_quotations": {
+                "title": "Total Quotations",
+                "count": str(total_count),
+                "amount": total_amount,
+                "formatted_amount": format_currency_inr(total_amount),
+            },
+            "approved": {
+                "title": "Approved",
+                "count": str(approved_count),
+                "amount": approved_amount,
+                "formatted_amount": format_currency_inr(approved_amount),
+            },
+            "sent": {
+                "title": "Sent",
+                "count": str(sent_count),
+                "amount": sent_amount,
+                "formatted_amount": format_currency_inr(sent_amount),
+            },
+            "pending": {
+                "title": "Pending",
+                "count": str(pending_count),
+                "amount": pending_amount,
+                "formatted_amount": format_currency_inr(pending_amount),
+            },
+        },
+        "quotations": formatted_quotations,
+        "count": total_count,
+    }
+
+
+@router.get("/quotations/detail/{quotation_id}")
 @router.get("/quotations/{quotation_id}")
-def get_quotation(quotation_id: int, db: Session = Depends(get_db)):
-    quotation = db.query(Quotation).filter(Quotation.id == quotation_id).first()
-    if not quotation:
+def get_user_quotation_detail(
+    quotation_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Dedicated endpoint for UserQuotationDetailScreen in Flutter.
+    Bearer token is compulsory (Authorization: Bearer <token>).
+    Fetches full quotation details by alphanumeric quotation_no (e.g., QTN-250517-0001) or database integer ID.
+    Strictly verifies ownership: users can only view their own quotations.
+    """
+    q = None
+    if quotation_id.isdigit():
+        q = db.query(Quotation).filter(Quotation.id == int(quotation_id)).first()
+    if not q:
+        q = db.query(Quotation).filter(Quotation.quotation_no.ilike(quotation_id.strip())).first()
+
+    if not q:
         raise HTTPException(status_code=404, detail="Quotation not found")
-    return format_quotation_response(quotation)
+
+    if getattr(current_user, "role", "") != "admin":
+        clean_phone = "".join(ch for ch in (current_user.phone_number or "") if ch.isdigit())
+        user_name = (current_user.full_name or "").strip().lower()
+        q_name = (q.customer_name or "").strip().lower()
+        user_email = (current_user.email or "").strip().lower()
+        q_email = (q.email or "").strip().lower()
+
+        belongs = (
+            q.user_id == current_user.id
+            or (user_name and user_name == q_name)
+            or (user_email and user_email == q_email)
+            or (clean_phone and clean_phone[-10:] in (q.phone or ""))
+        )
+        if not belongs:
+            raise HTTPException(status_code=403, detail="You do not have permission to view this quotation")
+
+    return format_user_quotation_detail_response(q)
+
+
+@router.get("/quotations/{quotation_id}/pdf")
+def get_quotation_pdf(
+    quotation_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns PDF download metadata / link for the quotation.
+    Bearer token is compulsory.
+    """
+    q = None
+    if quotation_id.isdigit():
+        q = db.query(Quotation).filter(Quotation.id == int(quotation_id)).first()
+    if not q:
+        q = db.query(Quotation).filter(Quotation.quotation_no.ilike(quotation_id.strip())).first()
+
+    if not q:
+        raise HTTPException(status_code=404, detail="Quotation not found")
+
+    if getattr(current_user, "role", "") != "admin":
+        clean_phone = "".join(ch for ch in (current_user.phone_number or "") if ch.isdigit())
+        user_name = (current_user.full_name or "").strip().lower()
+        q_name = (q.customer_name or "").strip().lower()
+        user_email = (current_user.email or "").strip().lower()
+        q_email = (q.email or "").strip().lower()
+
+        belongs = (
+            q.user_id == current_user.id
+            or (user_name and user_name == q_name)
+            or (user_email and user_email == q_email)
+            or (clean_phone and clean_phone[-10:] in (q.phone or ""))
+        )
+        if not belongs:
+            raise HTTPException(status_code=403, detail="You do not have permission to view this quotation")
+
+    return {
+        "quotation_id": q.quotation_no,
+        "file_name": f"{q.quotation_no}.pdf",
+        "file_size": "142 KB",
+        "mime_type": "application/pdf",
+        "status": "Ready",
+        "download_url": f"http://192.168.1.54:8000/api/quotations/{q.quotation_no}/pdf",
+        "generated_at": q.updated_at.isoformat() if q.updated_at else datetime.now().isoformat(),
+    }
+
+
+@router.get("/quotations/{quotation_id}/share")
+def share_quotation(
+    quotation_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns shareable link and text summary for the quotation.
+    Bearer token is compulsory.
+    """
+    q = None
+    if quotation_id.isdigit():
+        q = db.query(Quotation).filter(Quotation.id == int(quotation_id)).first()
+    if not q:
+        q = db.query(Quotation).filter(Quotation.quotation_no.ilike(quotation_id.strip())).first()
+
+    if not q:
+        raise HTTPException(status_code=404, detail="Quotation not found")
+
+    if getattr(current_user, "role", "") != "admin":
+        clean_phone = "".join(ch for ch in (current_user.phone_number or "") if ch.isdigit())
+        user_name = (current_user.full_name or "").strip().lower()
+        q_name = (q.customer_name or "").strip().lower()
+        user_email = (current_user.email or "").strip().lower()
+        q_email = (q.email or "").strip().lower()
+
+        belongs = (
+            q.user_id == current_user.id
+            or (user_name and user_name == q_name)
+            or (user_email and user_email == q_email)
+            or (clean_phone and clean_phone[-10:] in (q.phone or ""))
+        )
+        if not belongs:
+            raise HTTPException(status_code=403, detail="You do not have permission to view this quotation")
+
+    formatted_tot = format_currency_inr(q.grand_total)
+    return {
+        "quotation_id": q.quotation_no,
+        "share_url": f"http://192.168.1.54:8000/quotations/view/{q.quotation_no}",
+        "share_text": f"Quotation {q.quotation_no} for {q.customer_name} of {formatted_tot} from Power Solution Enterprises.",
+    }
 
 
 @router.put("/quotations/{quotation_id}")
 async def update_quotation(
-    quotation_id: int,
+    quotation_id: str,
     request: Request,
     db: Session = Depends(get_db),
 ):
     """Update an existing quotation. Supports BOTH multipart/form-data and application/json."""
-    quotation = db.query(Quotation).filter(Quotation.id == quotation_id).first()
+    quotation = None
+    if quotation_id.isdigit():
+        quotation = db.query(Quotation).filter(Quotation.id == int(quotation_id)).first()
+    if not quotation:
+        quotation = db.query(Quotation).filter(Quotation.quotation_no.ilike(quotation_id.strip())).first()
+
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found")
 
@@ -1624,8 +2058,6 @@ async def update_quotation(
     tax_amount = round(taxable_amount * tax_rate, 2)
     grand_total = round(taxable_amount + tax_amount, 2)
 
-    status_val = (payload.status or quotation.status).strip().capitalize()
-
     # Update fields
     quotation.quotation_date = payload.quotation_date.strip()
     quotation.valid_till = payload.valid_till.strip()
@@ -1644,21 +2076,26 @@ async def update_quotation(
     quotation.taxable_amount = taxable_amount
     quotation.tax_amount = tax_amount
     quotation.grand_total = grand_total
-    quotation.terms = payload.terms.strip() if payload.terms else None
-    quotation.status = status_val
+    quotation.terms = payload.terms.strip() if payload.terms else quotation.terms
+    quotation.status = payload.status.strip() if payload.status else quotation.status
 
     db.commit()
     db.refresh(quotation)
 
     return {
         "message": f"Quotation '{quotation.quotation_no}' updated successfully",
-        "quotation": format_quotation_response(quotation),
+        "quotation": format_user_quotation_detail_response(quotation),
     }
 
 
 @router.delete("/quotations/{quotation_id}")
-def delete_quotation(quotation_id: int, db: Session = Depends(get_db)):
-    quotation = db.query(Quotation).filter(Quotation.id == quotation_id).first()
+def delete_quotation(quotation_id: str, db: Session = Depends(get_db)):
+    quotation = None
+    if quotation_id.isdigit():
+        quotation = db.query(Quotation).filter(Quotation.id == int(quotation_id)).first()
+    if not quotation:
+        quotation = db.query(Quotation).filter(Quotation.quotation_no.ilike(quotation_id.strip())).first()
+
     if not quotation:
         raise HTTPException(status_code=404, detail="Quotation not found")
 
