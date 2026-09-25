@@ -933,11 +933,14 @@ response :-
 ## 10. Single Stock In Detail
 
 url : (http://192.168.1.59:8000/api/stock-in/1)
+or : (http://192.168.1.59:8000/api/stock-in/STK-IN-260915-0001)
+or : (http://192.168.1.59:8000/api/stock-in/LFT-001)
+or : (http://192.168.1.59:8000/api/stock-in/11)
 method : GET
 
 params :- 
 
-(None)
+(None - identifier in URL can be Stock In ID, Receipt No, Product SKU, or Product ID)
 
 response :- 
 

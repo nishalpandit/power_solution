@@ -147,6 +147,24 @@ class AdminLoginRequest(BaseModel):
         return value
 
 
+class UserResponse(BaseModel):
+    id: int
+    username: Optional[str] = None
+    full_name: str
+    email: str
+    phone_number: str
+    role: str
+    is_active: bool
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class UserListResponse(BaseModel):
+    count: int
+    users: List[UserResponse]
+    results: List[UserResponse]
+
+
 # ==============================================================================
 # PRODUCT SCHEMAS - HELPER FUNCTIONS
 # ==============================================================================

@@ -1,6 +1,6 @@
 # Power Solution API Documentation
 
-This document lists all APIs with their exact URLs, HTTP methods, every single parameter (both required and optional) sorted in the exact ascending order of the Flutter form fields from top to bottom, including all dropdown choices and sample responses.
+Base URL: http://192.168.1.59:8000/api
 
 ---
 
@@ -22,7 +22,6 @@ image:upload (File: JPG, PNG)
 
 response :- 
 
-```json
 {
   "message": "Category created successfully",
   "category": {
@@ -36,7 +35,6 @@ response :-
     "status": "active"
   }
 }
-```
 
 ---
 
@@ -50,7 +48,6 @@ params :-
 
 response :- 
 
-```json
 {
   "count": 1,
   "results": [
@@ -66,7 +63,6 @@ response :-
     }
   ]
 }
-```
 
 ---
 
@@ -90,7 +86,6 @@ Predefined Category Types:
 
 response :-
 
-```json
 {
   "id": 9,
   "product_id": 9,
@@ -168,7 +163,6 @@ response :-
   "created_at": "2026-09-10T06:27:51.798573",
   "updated_at": "2026-09-10T06:27:51.798585"
 }
-```
 
 ---
 
@@ -245,7 +239,6 @@ status:Active
 
 response :- 
 
-```json
 {
   "message": "Lift product created successfully",
   "product": {
@@ -336,7 +329,6 @@ response :-
     "updated_at": "2026-09-10T10:33:05.123456"
   }
 }
-```
 
 ---
 
@@ -400,7 +392,6 @@ status:Active
 
 response :- 
 
-```json
 {
   "message": "Generator product created successfully",
   "product": {
@@ -461,7 +452,6 @@ response :-
     "updated_at": "2026-09-10T10:33:05.234567"
   }
 }
-```
 
 ---
 
@@ -501,7 +491,7 @@ output_cable_connection:Bottom Cable Chamber with Terminal Blocks
 gland_plate_thickness:3.0 mm Removable Aluminium/CRCA Plate
 control_wiring:1.5 SQ MM 1100V Grade FRLS Flexible Copper Wire
 cable_entry:Bottom Entry
-power_supply:415 V ±10%, 50 Hz, 3 Phase 4 Wire
+power_supply:415 V +/- 10%, 50 Hz, 3 Phase 4 Wire
 purchase_price:180000.00
 selling_price:240000.00
 discount:0%
@@ -519,7 +509,6 @@ status:Active
 
 response :- 
 
-```json
 {
   "message": "Panel product created successfully",
   "product": {
@@ -568,13 +557,12 @@ response :-
       "gland_plate_thickness": "3.0 mm Removable Aluminium/CRCA Plate",
       "control_wiring": "1.5 SQ MM 1100V Grade FRLS Flexible Copper Wire",
       "cable_entry": "Bottom Entry",
-      "power_supply": "415 V ±10%, 50 Hz, 3 Phase 4 Wire"
+      "power_supply": "415 V +/- 10%, 50 Hz, 3 Phase 4 Wire"
     },
     "created_at": "2026-09-10T10:33:05.345678",
     "updated_at": "2026-09-10T10:33:05.345678"
   }
 }
-```
 
 ---
 
@@ -612,7 +600,6 @@ status:Active
 
 response :- 
 
-```json
 {
   "message": "Earthing product created successfully",
   "product": {
@@ -647,7 +634,6 @@ response :-
     "updated_at": "2026-09-10T10:33:05.456789"
   }
 }
-```
 
 ---
 
@@ -692,7 +678,6 @@ status:Active
 
 response :- 
 
-```json
 {
   "message": "Service product created successfully",
   "product": {
@@ -744,7 +729,6 @@ response :-
     "updated_at": "2026-09-10T10:33:05.567890"
   }
 }
-```
 
 ---
 
@@ -781,7 +765,6 @@ status:Active
 
 response :- 
 
-```json
 {
   "message": "Other product created successfully",
   "product": {
@@ -819,7 +802,6 @@ response :-
     "updated_at": "2026-09-10T10:33:05.678901"
   }
 }
-```
 
 ---
 
@@ -835,7 +817,6 @@ params :-
 
 response :- 
 
-```json
 {
   "count": 1,
   "category_type": "lift",
@@ -918,7 +899,6 @@ response :-
     }
   ]
 }
-```
 
 ---
 
@@ -932,7 +912,6 @@ params :-
 
 response :- 
 
-```json
 {
   "count": 1,
   "category_type": "generator",
@@ -996,7 +975,6 @@ response :-
     }
   ]
 }
-```
 
 ---
 
@@ -1010,7 +988,6 @@ params :-
 
 response :- 
 
-```json
 {
   "count": 1,
   "category_type": "panel",
@@ -1061,14 +1038,13 @@ response :-
         "gland_plate_thickness": "3.0 mm Removable Aluminium/CRCA Plate",
         "control_wiring": "1.5 SQ MM 1100V Grade FRLS Flexible Copper Wire",
         "cable_entry": "Bottom Entry",
-        "power_supply": "415 V ±10%, 50 Hz, 3 Phase 4 Wire"
+        "power_supply": "415 V +/- 10%, 50 Hz, 3 Phase 4 Wire"
       },
       "created_at": "2026-09-10T10:33:05.345678",
       "updated_at": "2026-09-10T10:33:05.345678"
     }
   ]
 }
-```
 
 ---
 
@@ -1082,7 +1058,6 @@ params :-
 
 response :- 
 
-```json
 {
   "count": 1,
   "category_type": "earthing",
@@ -1120,7 +1095,6 @@ response :-
     }
   ]
 }
-```
 
 ---
 
@@ -1134,7 +1108,6 @@ params :-
 
 response :- 
 
-```json
 {
   "count": 1,
   "category_type": "service",
@@ -1189,7 +1162,6 @@ response :-
     }
   ]
 }
-```
 
 ---
 
@@ -1203,7 +1175,6 @@ params :-
 
 response :- 
 
-```json
 {
   "count": 1,
   "category_type": "other",
@@ -1244,7 +1215,6 @@ response :-
     }
   ]
 }
-```
 
 ---
 
@@ -1262,7 +1232,6 @@ search:Schindler (Optional: searches across name, code, brand, model)
 
 response :- 
 
-```json
 {
   "count": 1,
   "results": [
@@ -1344,7 +1313,6 @@ response :-
     }
   ]
 }
-```
 
 ---
 
@@ -1360,7 +1328,6 @@ params :-
 
 response :- 
 
-```json
 {
   "id": 1,
   "category_type": "lift",
@@ -1437,7 +1404,6 @@ response :-
   "created_at": "2026-09-10T10:33:05.123456",
   "updated_at": "2026-09-10T10:33:05.123456"
 }
-```
 
 ---
 
@@ -1451,189 +1417,1005 @@ params :-
 
 response :- 
 
-```json
 {
   "message": "Product 'Passenger Traction Lift 8P' deleted successfully"
 }
-```
 
 ---
 
-## 11. Payment APIs (Add Payment Screen)
+---
 
-> **Full Documentation:** See [PAYMENT_API_DOCUMENTATION.md](file:///c:/Users/PC/Desktop/power_solution/PAYMENT_API_DOCUMENTATION.md) for complete details, request examples, and Flutter integration snippets.
+## 11. Payment APIs
 
 ### 11.1 Auto-Generate Next Invoice / Order Number
-- **URL:** `http://192.168.1.59:8000/api/payments/next-invoice-number`
-- **Method:** `GET`
-- **Response:** `{"invoice_no": "INV-260911-0001", "order_no": "INV-260911-0001"}`
+url : (http://192.168.1.59:8000/api/payments/next-invoice-number)
+method : GET
 
-### 11.2 Customer Dropdown (From Quotations)
-- **URL:** `http://192.168.1.59:8000/api/payments/customers`
-- **Method:** `GET`
-- **Response:** List of customers with phone, email, address, and quotation details.
+(Also supports http://192.168.1.59:8000/api/payments/next-number)
 
-### 11.3 Add Payment
-- **URL:** `http://192.168.1.59:8000/api/payments/add` *(also supports `http://192.168.1.59:8000/api/payment/add` and `http://192.168.1.59:8000/api/payments`)*
-- **Method:** `POST`
-- **Content-Type:** `multipart/form-data` or `application/json`
-- **Params:** `invoice_no`, `customer_name`, `quotation_id`, `quotation_no`, `customer_phone`, `customer_email`, `customer_address`, `payment_date`, `amount_received`, `payment_mode` (`Cash`, `Online`, `Cheque`, `UPI`), `transaction_no`, `reference_no`, `notes`, `status`, `payment_proof` (file)
-- **Response:** Created payment object with `invoice_no` and all details.
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "invoice_no": "INV-260911-0001",
+  "order_no": "INV-260911-0001"
+}
 
 ---
 
-## 12. Order APIs (Create Order Screen)
+### 11.2 Customer Dropdown (From Quotation)
+url : (http://192.168.1.59:8000/api/payments/customers)
+method : GET
 
-> **Full Documentation:** See [ORDER_API_DOCUMENTATION.md](file:///c:/Users/PC/Desktop/power_solution/ORDER_API_DOCUMENTATION.md) for complete details and request examples.
+(Also supports http://192.168.1.59:8000/api/quotations/customers)
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "count": 2,
+  "results": [
+    {
+      "customer_name": "Skyline Enterprises",
+      "phone": "+91 9876543210",
+      "email": "contact@skyline.com",
+      "address": "45 Industrial Area, Phase 2, New Delhi",
+      "latest_quotation_id": 1,
+      "latest_quotation_no": "QTN-250517-0001",
+      "quotations": [
+        {
+          "id": 1,
+          "quotation_no": "QTN-250517-0001",
+          "quotation_date": "17 May 2025",
+          "grand_total": 501500.0,
+          "status": "Sent"
+        }
+      ]
+    }
+  ]
+}
+
+---
+
+### 11.3 Create / Add Payment
+url : (http://192.168.1.59:8000/api/payments/add)
+method : POST
+
+(Also supports http://192.168.1.59:8000/api/payment/add and http://192.168.1.59:8000/api/payments)
+
+params :- 
+
+invoice_no:INV-260911-0001
+customer_name:Skyline Enterprises
+quotation_id:1
+quotation_no:QTN-250517-0001
+customer_phone:+91 9876543210
+customer_email:contact@skyline.com
+customer_address:45 Industrial Area, Phase 2, New Delhi
+payment_date:2026-09-11
+amount_received:50000.00
+payment_mode:Cash (Options: Cash, Online, Cheque, UPI)
+transaction_no:TRX-987654321
+reference_no:REF-001
+notes:Payment received
+status:Received
+payment_proof:upload (File: JPG, PNG, PDF)
+
+response :- 
+
+{
+  "message": "Payment created successfully",
+  "payment": {
+    "id": 1,
+    "invoice_no": "INV-260911-0001",
+    "customer_name": "Skyline Enterprises",
+    "amount_received": 50000.0,
+    "payment_mode": "Cash",
+    "status": "Received"
+  }
+}
+
+---
+
+### 11.4 List All Payments
+url : (http://192.168.1.59:8000/api/payments)
+method : GET
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "count": 1,
+  "payments": [
+    {
+      "id": 1,
+      "payment_no": "INV-260911-0001",
+      "customer_name": "Skyline Enterprises",
+      "amount_received": 50000.0,
+      "payment_mode": "Cash",
+      "status": "Received"
+    }
+  ]
+}
+
+---
+
+### 11.5 Get Single Payment Details
+url : (http://192.168.1.59:8000/api/payments/1)
+method : GET
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "id": 1,
+  "payment_no": "INV-260911-0001",
+  "customer_name": "Skyline Enterprises",
+  "amount_received": 50000.0,
+  "status": "Received"
+}
+
+---
+
+### 11.6 Delete Payment
+url : (http://192.168.1.59:8000/api/payments/1)
+method : DELETE
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "message": "Payment 1 deleted successfully"
+}
+
+---
+
+## 12. Order APIs
 
 ### 12.1 Auto-Generate Next Order Number
-- **URL:** `http://192.168.1.59:8000/api/orders/next-order-number`
-- **Method:** `GET`
-- **Response:** `{"order_no": "ORD-260912-0001"}`
+url : (http://192.168.1.59:8000/api/orders/next-order-number)
+method : GET
 
-### 12.2 Quotation Dropdown (For Select Quotation)
-- **URL:** `http://192.168.1.59:8000/api/orders/quotations`
-- **Method:** `GET`
-- **Response:** List of approved quotations with customer info, line items, and amount calculations formatted for Flutter.
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "order_no": "ORD-260912-0001"
+}
+
+---
+
+### 12.2 Quotation Dropdown (Select Quotation)
+url : (http://192.168.1.59:8000/api/orders/quotations)
+method : GET
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "count": 1,
+  "results": [
+    {
+      "id": "QTN-250517-0001",
+      "quotation_id": 1,
+      "quotation_no": "QTN-250517-0001",
+      "date": "17 May 2025",
+      "customer": "Skyline Enterprises",
+      "mobile": "+91 9876543210",
+      "email": "contact@skyline.com",
+      "grandTotal": 501500.0,
+      "status": "Sent"
+    }
+  ]
+}
+
+---
 
 ### 12.3 Create Order / Save Draft
-- **URL:** `http://192.168.1.59:8000/api/orders`
-- **Method:** `POST`
-- **Content-Type:** `application/json`
-- **Params:** `order_no`, `quotation_id`, `order_date`, `delivery_date`, `order_status`, `customer`, `subtotal`, `discount`, `tax`, `grand_total`, `advance_paid`, `balance_amount`, `payment_status`, `payment_mode`, `transaction_no`, `payment_date`, `special_instructions`, `internal_notes`, `terms_accepted`
-- **Response:** Created order object with status 201.
+url : (http://192.168.1.59:8000/api/orders)
+method : POST
+
+params :- 
+
+order_no:ORD-260912-0001
+quotation_id:1
+order_date:12 Sep 2026
+delivery_date:20 Sep 2026
+order_status:Confirmed
+customer:Skyline Enterprises
+subtotal:450000.00
+discount:25000.00
+tax:76500.00
+grand_total:501500.00
+advance_paid:100000.00
+balance_amount:401500.00
+payment_status:Partially Paid
+payment_mode:Online / Bank Transfer
+transaction_no:TXN-20260912-001
+payment_date:12 Sep 2026
+special_instructions:Handle with care
+internal_notes:Priority delivery
+terms_accepted:true
+
+response :- 
+
+{
+  "message": "Order created successfully",
+  "order": {
+    "id": 1,
+    "order_no": "ORD-260912-0001",
+    "customer": "Skyline Enterprises",
+    "grand_total": 501500.0,
+    "order_status": "Confirmed"
+  }
+}
 
 ---
 
-## 13. Cash Bill APIs (Generate Cash Bill Screen)
+### 12.4 List All Orders
+url : (http://192.168.1.59:8000/api/orders)
+method : GET
 
-> **Full Documentation:** See [CASH_BILL_API_DOCUMENTATION.md](file:///c:/Users/PC/Desktop/power_solution/CASH_BILL_API_DOCUMENTATION.md) for complete details, request examples, and calculation breakdowns.
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "count": 1,
+  "orders": [
+    {
+      "id": 1,
+      "order_no": "ORD-260912-0001",
+      "customer": "Skyline Enterprises",
+      "grand_total": 501500.0,
+      "order_status": "Confirmed"
+    }
+  ]
+}
+
+---
+
+### 12.5 Single Order Details
+url : (http://192.168.1.59:8000/api/orders/1)
+method : GET
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "id": 1,
+  "order_no": "ORD-260912-0001",
+  "customer": "Skyline Enterprises",
+  "grand_total": 501500.0,
+  "order_status": "Confirmed"
+}
+
+---
+
+### 12.6 Delete Order
+url : (http://192.168.1.59:8000/api/orders/1)
+method : DELETE
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "message": "Order ORD-260912-0001 deleted successfully"
+}
+
+---
+
+## 13. Cash Bill APIs
 
 ### 13.1 Auto-Generate Next Bill Number
-- **URL:** `http://192.168.1.59:8000/api/cash-bills/next-bill-number`
-- **Method:** `GET`
-- **Response:** `{"bill_no": "CB-260912-0001"}`
+url : (http://192.168.1.59:8000/api/cash-bills/next-bill-number)
+method : GET
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "bill_no": "CB-260912-0001"
+}
+
+---
 
 ### 13.2 Product Picker Master (Categories & Products)
-- **URL:** `http://192.168.1.59:8000/api/cash-bills/product-picker`
-- **Method:** `GET`
-- **Response:** Hierarchical master `product_types`, `categories`, and `products` matching Flutter bottom sheet.
+url : (http://192.168.1.59:8000/api/cash-bills/product-picker)
+method : GET
 
-### 13.3 Calculate Bill (Live Calculations Preview)
-- **URL:** `http://192.168.1.59:8000/api/cash-bills/calculate`
-- **Method:** `POST`
-- **Params:** `items`, `discount`, `amount_paid`
-- **Response:** Computed `subtotal`, `taxable_amount`, `gst` (18%), `grand_total`, `change_returned`, `balance_amount`.
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "product_types": [
+    "Lift",
+    "Generator",
+    "LT Panel",
+    "Earthing",
+    "Service",
+    "Other"
+  ]
+}
+
+---
+
+### 13.3 Calculate Bill (Live Calculation Preview)
+url : (http://192.168.1.59:8000/api/cash-bills/calculate)
+method : POST
+
+params :- 
+
+items:[{"id":"LIFT001","name":"G+2 Automatic Passenger Lift","price":450000.0,"qty":1}]
+discount:0.0
+amount_paid:500000.0
+
+response :- 
+
+{
+  "subtotal": 450000.0,
+  "discount": 0.0,
+  "taxable_amount": 450000.0,
+  "gst": 81000.0,
+  "grand_total": 531000.0,
+  "amount_paid": 500000.0,
+  "change_returned": 0.0,
+  "balance_amount": 31000.0
+}
+
+---
 
 ### 13.4 Generate Cash Bill / Save Draft
-- **URL:** `http://192.168.1.59:8000/api/cash-bills`
-- **Method:** `POST`
-- **Content-Type:** `application/json`
-- **Params:** `bill_no`, `bill_date`, `customer_type`, `customer_name`, `mobile`, `items`, `discount`, `payment_mode`, `amount_paid`, `notes`, `status`
-- **Response:** Generated cash bill object with calculated totals.
+url : (http://192.168.1.59:8000/api/cash-bills)
+method : POST
+
+params :- 
+
+bill_no:CB-260912-0001
+bill_date:12 Sep 2026
+customer_type:Walk-in Customer
+customer_name:Rohan Sharma
+mobile:9876500001
+items:[{"name":"G+2 Automatic Passenger Lift","price":450000.0,"qty":1}]
+discount:0.0
+payment_mode:Cash
+amount_paid:531000.0
+notes:Delivered directly from counter
+status:Generated
+
+response :- 
+
+{
+  "message": "Cash bill 'CB-260912-0001' generated successfully",
+  "bill": {
+    "id": 1,
+    "bill_no": "CB-260912-0001",
+    "customer_name": "Rohan Sharma",
+    "grand_total": 531000.0,
+    "status": "Generated"
+  }
+}
 
 ---
 
-## 14. Purchase Order APIs (Add Purchase Order Screen)
+### 13.5 List All Cash Bills
+url : (http://192.168.1.59:8000/api/cash-bills)
+method : GET
 
-> **Full Documentation:** See [PURCHASE_API_DOCUMENTATION.md](file:///c:/Users/PC/Desktop/power_solution/PURCHASE_API_DOCUMENTATION.md) for complete details, request examples, and calculation breakdowns.
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "count": 1,
+  "results": [
+    {
+      "id": 1,
+      "bill_no": "CB-260912-0001",
+      "customer_name": "Rohan Sharma",
+      "grand_total": 531000.0,
+      "status": "Generated"
+    }
+  ]
+}
+
+---
+
+### 13.6 Single Cash Bill Details
+url : (http://192.168.1.59:8000/api/cash-bills/1)
+method : GET
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "id": 1,
+  "bill_no": "CB-260912-0001",
+  "customer_name": "Rohan Sharma",
+  "grand_total": 531000.0,
+  "status": "Generated"
+}
+
+---
+
+### 13.7 Delete Cash Bill
+url : (http://192.168.1.59:8000/api/cash-bills/1)
+method : DELETE
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "message": "Cash bill 'CB-260912-0001' deleted successfully"
+}
+
+---
+
+## 14. Purchase Order APIs
 
 ### 14.1 Auto-Generate Next PO Number
-- **URL:** `http://192.168.1.59:8000/api/purchases/next-po-number`
-- **Method:** `GET`
-- **Params:** `(None)`
-- **Response:** `{"po_number": "PO-260914-0001"}`
+url : (http://192.168.1.59:8000/api/purchases/next-po-number)
+method : GET
 
-### 14.2 Supplier Dropdown (Select Supplier)
-- **URL:** `http://192.168.1.59:8000/api/purchases/suppliers`
-- **Method:** `GET`
-- **Params:** `(None)`
-- **Response:** List of suppliers with code, name, contact person, mobile, email, and address.
+(Also supports http://192.168.1.59:8000/api/purchases/next-number and http://192.168.1.59:8000/api/purchase-orders/next-number)
 
-### 14.3 Add New Supplier
-- **URL:** `http://192.168.1.59:8000/api/purchases/suppliers`
-- **Method:** `POST`
-- **Params:** `name`, `supplier_code` (optional), `contact_person`, `mobile`, `email`, `address`, `gstin`
-- **Response:** Created supplier object with assigned code.
+params :- 
 
-### 14.4 Purchase Product Picker Master
-- **URL:** `http://192.168.1.59:8000/api/purchases/product-picker`
-- **Method:** `GET`
-- **Params:** `(None)`
-- **Response:** Hierarchical master with `purchasePrice`, `sku`, `unit`, `gst` (18%), and technical specifications.
+(None)
 
-### 14.5 Calculate Purchase Order (Live Preview)
-- **URL:** `http://192.168.1.59:8000/api/purchases/calculate`
-- **Method:** `POST`
-- **Params:** `items`
-- **Response:** Computed `subtotal`, `gst_total` (18%), and `grand_total`.
+response :- 
 
-### 14.6 Place Purchase Order / Save Draft
-- **URL:** `http://192.168.1.59:8000/api/purchases`
-- **Method:** `POST`
-- **Content-Type:** `application/json`
-- **Params:** `po_number`, `supplier_id`, `po_date`, `expected_delivery`, `payment_terms`, `status`, `reference`, `items`, `notes`
-- **Response:** Created purchase order object with computed totals.
-
-### 14.7 List All Purchase Orders
-- **URL:** `http://192.168.1.59:8000/api/purchases`
-- **Method:** `GET`
-- **Params:** `(None)`
-- **Response:** List of purchase orders with summary counts and totals.
+{
+  "po_number": "PO-260914-0001"
+}
 
 ---
 
-## 15. Invoice APIs (Create Invoice Screen)
+### 14.2 Supplier Dropdown (Select Supplier)
+url : (http://192.168.1.59:8000/api/purchases/suppliers)
+method : GET
 
-> **Full Documentation:** See [INVOICE_API_DOCUMENTATION.md](file:///c:/Users/PC/Desktop/power_solution/INVOICE_API_DOCUMENTATION.md) for complete details, request examples, and response schemas matching the Create Invoice screen.
+(Also supports http://192.168.1.59:8000/api/suppliers and http://192.168.1.59:8000/api/purchase-orders/suppliers)
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "count": 2,
+  "suppliers": [
+    {
+      "id": 1,
+      "supplier_code": "SUP-001",
+      "supplier_name": "Kirloskar Oil Engines Ltd",
+      "contact_person": "Amit Sharma",
+      "mobile": "9876543210",
+      "email": "amit@kirloskar.com",
+      "address": "Pune, Maharashtra"
+    }
+  ]
+}
+
+---
+
+### 14.3 Add New Supplier
+url : (http://192.168.1.59:8000/api/purchases/suppliers)
+method : POST
+
+(Also supports http://192.168.1.59:8000/api/suppliers and http://192.168.1.59:8000/api/purchase-orders/suppliers)
+
+params :- 
+
+name:Kirloskar Oil Engines Ltd
+supplier_code:SUP-001
+contact_person:Amit Sharma
+mobile:9876543210
+email:amit@kirloskar.com
+address:Pune, Maharashtra
+city:Pune
+state:Maharashtra
+pincode:411001
+payment_terms:30 Days Net
+gstin:27AAACK1234F1Z5
+pan_number:AAACK1234F
+remarks:Main DG engine supplier
+
+response :- 
+
+{
+  "message": "Supplier created successfully",
+  "supplier": {
+    "id": 1,
+    "supplier_code": "SUP-001",
+    "name": "Kirloskar Oil Engines Ltd"
+  }
+}
+
+---
+
+### 14.4 Purchase Product Picker Master
+url : (http://192.168.1.59:8000/api/purchases/product-picker)
+method : GET
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "product_types": [
+    "Lift",
+    "Generator",
+    "LT Panel",
+    "Earthing",
+    "Service",
+    "Other"
+  ]
+}
+
+---
+
+### 14.5 Calculate Purchase Order (Live Preview)
+url : (http://192.168.1.59:8000/api/purchases/calculate)
+method : POST
+
+(Also supports http://192.168.1.59:8000/api/purchase-orders/calculate)
+
+params :- 
+
+items:[{"product_name":"15 kVA Silent DG Set","purchase_price":210000,"qty":1,"unit":"Set","gst":18}]
+
+response :- 
+
+{
+  "subtotal": 210000.0,
+  "gst_total": 37800.0,
+  "grand_total": 247800.0
+}
+
+---
+
+### 14.6 Place Purchase Order / Save Draft
+url : (http://192.168.1.59:8000/api/purchases)
+method : POST
+
+(Also supports http://192.168.1.59:8000/api/purchases/create, http://192.168.1.59:8000/api/purchase-orders, and http://192.168.1.59:8000/api/purchase-orders/create)
+
+params :- 
+
+po_number:PO-260914-0001
+supplier_id:1
+po_date:14 Sep 2026
+expected_delivery:21 Sep 2026
+payment_terms:30% Advance, 70% Against Delivery
+status:Ordered
+reference:REF-PO-001
+items:[{"product_name":"15 kVA Silent DG Set","purchase_price":210000,"qty":1,"unit":"Set","gst":18}]
+notes:Urgent delivery required
+
+response :- 
+
+{
+  "message": "Purchase order created successfully",
+  "purchase_order": {
+    "id": 1,
+    "po_number": "PO-260914-0001",
+    "supplier_name": "Kirloskar Oil Engines Ltd",
+    "grand_total": 247800.0,
+    "status": "Ordered"
+  }
+}
+
+---
+
+### 14.7 List All Purchase Orders
+url : (http://192.168.1.59:8000/api/purchases)
+method : GET
+
+(Also supports http://192.168.1.59:8000/api/purchase-orders)
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "count": 1,
+  "purchase_orders": [
+    {
+      "id": 1,
+      "po_number": "PO-260914-0001",
+      "supplier_name": "Kirloskar Oil Engines Ltd",
+      "grand_total": 247800.0,
+      "status": "Ordered"
+    }
+  ]
+}
+
+---
+
+### 14.8 Single Purchase Order Details
+url : (http://192.168.1.59:8000/api/purchases/1)
+method : GET
+
+(Also supports http://192.168.1.59:8000/api/purchase-orders/1 and PO string e.g. PO-260914-0001)
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "id": 1,
+  "po_number": "PO-260914-0001",
+  "supplier_name": "Kirloskar Oil Engines Ltd",
+  "grand_total": 247800.0,
+  "status": "Ordered"
+}
+
+---
+
+### 14.9 Delete Purchase Order
+url : (http://192.168.1.59:8000/api/purchases/1)
+method : DELETE
+
+(Also supports http://192.168.1.59:8000/api/purchase-orders/1)
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "message": "Purchase order PO-260914-0001 deleted successfully"
+}
+
+---
+
+## 15. Invoice APIs
 
 ### 15.1 Auto-Generate Next Invoice Number
-- **URL:** `http://192.168.1.59:8000/api/invoices/next-invoice-number`
-- **Method:** `GET`
-- **Response:** `{"invoice_no": "INV-260912-0001"}`
+url : (http://192.168.1.59:8000/api/invoices/next-invoice-number)
+method : GET
+
+(Also supports http://192.168.1.59:8000/api/invoices/next-number)
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "invoice_no": "INV-260912-0001"
+}
+
+---
 
 ### 15.2 Order Dropdown (Auto-fills Customer Details & Items)
-- **URL:** `http://192.168.1.59:8000/api/invoices/orders`
-- **Method:** `GET`
-- **Response:** Orders formatted to auto-fill Customer Details, Address, Items with specifications, and totals.
+url : (http://192.168.1.59:8000/api/invoices/orders)
+method : GET
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "count": 1,
+  "orders": [
+    {
+      "order_no": "ORD-260912-0001",
+      "customer_name": "Skyline Enterprises",
+      "phone": "+91 9876543210",
+      "email": "contact@skyline.com",
+      "billing_address": "45 Industrial Area, Phase 2, New Delhi",
+      "grand_total": 501500.0
+    }
+  ]
+}
+
+---
 
 ### 15.3 Customer List (Select Customer Modal)
-- **URL:** `http://192.168.1.59:8000/api/invoices/customers`
-- **Method:** `GET`
-- **Response:** Customer list with phone, email, billing address, and latest order link.
+url : (http://192.168.1.59:8000/api/invoices/customers)
+method : GET
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "count": 2,
+  "customers": [
+    {
+      "customer_name": "Skyline Enterprises",
+      "phone": "+91 9876543210",
+      "email": "contact@skyline.com",
+      "billing_address": "45 Industrial Area, Phase 2, New Delhi"
+    }
+  ]
+}
+
+---
 
 ### 15.4 Create Invoice
-- **URL:** `http://192.168.1.59:8000/api/invoices/create` *(also supports `/api/invoices` and `/api/invoices/add`)*
-- **Method:** `POST`
-- **Params:** `invoice_no`, `invoice_date`, `due_date`, `order_no`, `payment_terms`, `reference_no`, `customer_name`, `phone`, `email`, `billing_address`, `delivery_address`, `items`, `subtotal`, `discount`, `tax`, `tax_percent`, `grand_total`, `notes`, `status`
-- **Response:** Created invoice object with complete financial breakdown.
+url : (http://192.168.1.59:8000/api/invoices)
+method : POST
+
+(Also supports http://192.168.1.59:8000/api/invoices/create and http://192.168.1.59:8000/api/invoices/add)
+
+params :- 
+
+invoice_no:INV-260912-0001
+invoice_date:12 Sep 2026
+due_date:26 Sep 2026
+order_no:ORD-260912-0001
+payment_terms:Net 15
+reference_no:REF-INV-001
+customer_name:Skyline Enterprises
+phone:+91 9876543210
+email:contact@skyline.com
+billing_address:45 Industrial Area, Phase 2, New Delhi
+delivery_address:45 Industrial Area, Phase 2, New Delhi
+items:[{"item_name":"G+2 Automatic Passenger Lift","price":450000,"qty":1,"total":450000}]
+subtotal:450000.00
+discount:25000.00
+tax:76500.00
+tax_percent:18.00
+grand_total:501500.00
+notes:Thank you for your business
+status:Pending
+
+response :- 
+
+{
+  "message": "Invoice created successfully",
+  "invoice": {
+    "id": 1,
+    "invoice_no": "INV-260912-0001",
+    "customer_name": "Skyline Enterprises",
+    "grand_total": 501500.0,
+    "status": "Pending"
+  }
+}
+
+---
 
 ### 15.5 List All Invoices
-- **URL:** `http://192.168.1.59:8000/api/invoices`
-- **Method:** `GET`
-- **Filters:** `search`, `customer_name`, `status`, `order_no`, `payment_terms`
-- **Response:** Reverse-chronological list of invoices with total count.
+url : (http://192.168.1.59:8000/api/invoices)
+method : GET
+
+params :- 
+
+search: (Optional) Search by invoice no, customer name, order no, or phone
+customer_name: (Optional) Filter by customer name
+status: (Optional) Filter by status (Paid, Pending, Partial, Overdue)
+order_no: (Optional) Filter by order no
+payment_terms: (Optional) Filter by payment terms
+
+response :- 
+
+{
+  "count": 1,
+  "invoices": [
+    {
+      "id": 1,
+      "invoice_no": "INV-260912-0001",
+      "customer_name": "Skyline Enterprises",
+      "grand_total": 501500.0,
+      "status": "Pending"
+    }
+  ]
+}
+
+---
 
 ### 15.6 Single Invoice Details
-- **URL:** `http://192.168.1.59:8000/api/invoices/{invoice_id}` *(supports ID or invoice_no e.g. `INV-260912-0001`)*
-- **Method:** `GET`
+url : (http://192.168.1.59:8000/api/invoices/1)
+method : GET
 
-### 15.7 Update Invoice
-- **URL:** `http://192.168.1.59:8000/api/invoices/{invoice_id}`
-- **Method:** `PUT` / `PATCH`
+(Also supports invoice number e.g. http://192.168.1.59:8000/api/invoices/INV-260912-0001)
 
-### 15.8 Quick Status Update
-- **URL:** `http://192.168.1.59:8000/api/invoices/{invoice_id}/status`
-- **Method:** `PATCH`
-- **Params:** `{"status": "Paid"}`
+params :- 
 
-### 15.9 Delete Invoice
-- **URL:** `http://192.168.1.59:8000/api/invoices/{invoice_id}`
-- **Method:** `DELETE`
+(None)
 
+response :- 
 
+{
+  "id": 1,
+  "invoice_no": "INV-260912-0001",
+  "customer_name": "Skyline Enterprises",
+  "grand_total": 501500.0,
+  "status": "Pending"
+}
 
+---
 
+### 15.7 Update Invoice Status
+url : (http://192.168.1.59:8000/api/invoices/1/status)
+method : PATCH
 
+(Also supports PUT http://192.168.1.59:8000/api/invoices/1/status)
 
+params :- 
 
+status:Paid
+
+response :- 
+
+{
+  "message": "Invoice status updated successfully",
+  "invoice_no": "INV-260912-0001",
+  "status": "Paid"
+}
+
+---
+
+### 15.8 Delete Invoice
+url : (http://192.168.1.59:8000/api/invoices/1)
+method : DELETE
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "message": "Invoice INV-260912-0001 deleted successfully"
+}
+
+---
+
+## 16. User APIs
+
+### 16.1 List All Users
+url : (http://192.168.1.59:8000/api/users)
+method : GET
+
+(Also supports http://192.168.1.59:8000/api/users/list and http://192.168.1.59:8000/api/user/list)
+
+params :- 
+
+search: (Optional) Search text matching user's full name, email, phone number, or username
+role: (Optional) Filter by role (user or admin)
+is_active: (Optional) Filter by active status (true or false)
+limit: (Optional) Integer to limit number of records
+offset: (Optional) Integer to offset results for pagination
+
+response :- 
+
+{
+  "count": 12,
+  "users": [
+    {
+      "id": 1,
+      "username": null,
+      "full_name": "Test User",
+      "email": "test88190241@example.com",
+      "phone_number": "15558819024",
+      "role": "user",
+      "is_active": true,
+      "created_at": "2026-09-09T04:43:59.992396",
+      "updated_at": "2026-09-09T04:43:59.992405"
+    },
+    {
+      "id": 6,
+      "username": "admin",
+      "full_name": "System Administrator",
+      "email": "admin@power.solution",
+      "phone_number": "0000000000",
+      "role": "admin",
+      "is_active": true,
+      "created_at": "2026-09-09T05:19:42.523953",
+      "updated_at": "2026-09-09T05:19:42.523959"
+    }
+  ],
+  "results": [
+    {
+      "id": 1,
+      "username": null,
+      "full_name": "Test User",
+      "email": "test88190241@example.com",
+      "phone_number": "15558819024",
+      "role": "user",
+      "is_active": true,
+      "created_at": "2026-09-09T04:43:59.992396",
+      "updated_at": "2026-09-09T04:43:59.992405"
+    },
+    {
+      "id": 6,
+      "username": "admin",
+      "full_name": "System Administrator",
+      "email": "admin@power.solution",
+      "phone_number": "0000000000",
+      "role": "admin",
+      "is_active": true,
+      "created_at": "2026-09-09T05:19:42.523953",
+      "updated_at": "2026-09-09T05:19:42.523959"
+    }
+  ]
+}
+
+---
+
+### 16.2 Get Single User Details
+url : (http://192.168.1.59:8000/api/users/6)
+method : GET
+
+(Also supports http://192.168.1.59:8000/api/user/6)
+
+params :- 
+
+(None)
+
+response :- 
+
+{
+  "message": "User details fetched successfully",
+  "user": {
+    "id": 6,
+    "username": "admin",
+    "full_name": "System Administrator",
+    "email": "admin@power.solution",
+    "phone_number": "0000000000",
+    "role": "admin",
+    "is_active": true,
+    "created_at": "2026-09-09T05:19:42.523953",
+    "updated_at": "2026-09-09T05:19:42.523959"
+  }
+}

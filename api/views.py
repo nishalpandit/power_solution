@@ -1,6 +1,7 @@
 import json
 import os
 import uuid
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Union
 
@@ -48,8 +49,10 @@ from api.schemas import (
     StockInUpdateRequest,
     SupplierCreateRequest,
     SupplierResponse,
+    UserListResponse,
     UserLoginRequest,
     UserRegisterRequest,
+    UserResponse,
 )
 from core.auth import create_access_token, get_current_user, hash_password, require_admin, verify_password
 from core.settings import get_db
@@ -257,6 +260,82 @@ async def admin_login(request: Request, db: Session = Depends(get_db)):
             "role": user.role,
             "is_active": user.is_active,
         },
+    }
+
+
+def format_user_response(user: User) -> dict:
+    return {
+        "id": user.id,
+        "username": user.username,
+        "full_name": user.full_name,
+        "email": user.email,
+        "phone_number": user.phone_number,
+        "role": user.role,
+        "is_active": user.is_active,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+        "updated_at": user.updated_at.isoformat() if user.updated_at else None,
+    }
+
+
+@router.get("/users")
+@router.get("/users/list")
+@router.get("/user/list")
+def list_users(
+    search: Optional[str] = Query(None, description="Search by name, email, phone number, or username"),
+    role: Optional[str] = Query(None, description="Filter by role: 'admin' or 'user'"),
+    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    limit: Optional[int] = Query(None, description="Limit results"),
+    offset: Optional[int] = Query(None, description="Offset results"),
+    db: Session = Depends(get_db),
+):
+    query = db.query(User)
+
+    if role:
+        query = query.filter(User.role.ilike(role.strip()))
+
+    if is_active is not None:
+        query = query.filter(User.is_active == is_active)
+
+    if search:
+        pat = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                User.full_name.ilike(pat),
+                User.email.ilike(pat),
+                User.phone_number.like(pat),
+                User.username.ilike(pat),
+            )
+        )
+
+    total_count = query.count()
+    query = query.order_by(User.id.asc())
+
+    if offset is not None:
+        query = query.offset(offset)
+    if limit is not None:
+        query = query.limit(limit)
+
+    users = query.all()
+    results = [format_user_response(u) for u in users]
+    return {
+        "count": total_count,
+        "users": results,
+        "results": results,
+    }
+
+
+@router.get("/users/{user_id}")
+@router.get("/user/{user_id}")
+def get_user_details(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User with ID {user_id} not found",
+        )
+    return {
+        "message": "User details fetched successfully",
+        "user": format_user_response(user),
     }
 
 
@@ -4631,8 +4710,13 @@ def compute_stock_in_totals(
 
 
 def format_stock_in_response(stk: StockIn) -> dict:
+    sku_val = stk.product_sku or ""
+    qty_val = float(stk.quantity or 0.0)
+    rate_val = float(stk.rate or 0.0)
     return {
         "id": stk.id,
+        "stock_id": stk.id,
+        "stock_in_id": stk.id,
         "receipt_no": stk.receipt_no,
         "receipt_date": stk.receipt_date,
         "po_number": stk.po_number,
@@ -4643,19 +4727,25 @@ def format_stock_in_response(stk: StockIn) -> dict:
         "supplier_name": stk.supplier_name,
         "supplier_contact": stk.supplier_contact,
         "product_id": stk.product_id,
-        "product_sku": stk.product_sku,
+        "product_sku": sku_val,
+        "product_code": sku_val,
+        "sku": sku_val,
         "product_type": stk.product_type,
         "category": stk.category,
         "product_name": stk.product_name,
         "product": stk.product_name,
         "specifications": stk.specifications if isinstance(stk.specifications, dict) else {},
-        "quantity": float(stk.quantity or 0.0),
+        "quantity": qty_val,
+        "stock": qty_val,
+        "current_stock": qty_val,
         "unit": stk.unit or "Nos",
         "warehouse": stk.warehouse or "Main Warehouse",
         "rack": stk.rack,
         "batch_no": stk.batch_no,
         "serial_no": stk.serial_no,
-        "rate": float(stk.rate or 0.0),
+        "rate": rate_val,
+        "price": rate_val,
+        "purchase_price": rate_val,
         "discount": float(stk.discount or 0.0),
         "gst": float(stk.gst or 18.0),
         "gross_amount": float(stk.gross_amount or 0.0),
@@ -5246,6 +5336,16 @@ def get_stock_by_category_type(db: Session = Depends(get_db)):
     overall_total_stock = 0.0
     overall_total_valuation = 0.0
 
+    # Index existing Stock In receipts by product_id and sku for instant relation
+    all_stock_ins = db.query(StockIn).order_by(StockIn.id.desc()).all()
+    stock_in_by_prod_id = {}
+    stock_in_by_sku = {}
+    for si in all_stock_ins:
+        if si.product_id and si.product_id not in stock_in_by_prod_id:
+            stock_in_by_prod_id[si.product_id] = si
+        if si.product_sku and si.product_sku.lower() not in stock_in_by_sku:
+            stock_in_by_sku[si.product_sku.lower()] = si
+
     # Process each category type and its categories
     for p_type in product_types:
         cat_list = categories_map.get(p_type, [])
@@ -5273,13 +5373,27 @@ def get_stock_by_category_type(db: Session = Depends(get_db)):
                     stk_val = float(p.stock or 0.0)
                     price_val = float(p.purchase_price or p.selling_price or 0.0)
                     item_valuation = round(stk_val * price_val, 2)
+                    p_code = p.product_code or f"PROD{p.id:03d}"
+                    p_sku = p.model_number or p_code
+                    si = (
+                        stock_in_by_prod_id.get(p.id)
+                        or stock_in_by_sku.get(str(p.product_code or "").lower())
+                        or stock_in_by_sku.get(str(p.model_number or "").lower())
+                    )
                     cat_products_list.append({
-                        "id": p.product_code or f"PROD{p.id:03d}",
+                        "id": p_code,
+                        "product_id": p.id,
+                        "product_code": p_code,
+                        "stock_id": si.id if si else p.id,
+                        "stock_in_id": si.id if si else None,
+                        "receipt_no": si.receipt_no if si else None,
                         "name": p.product_name,
-                        "sku": p.model_number or p.product_code or f"SKU-{p.id:03d}",
+                        "sku": p_sku,
                         "stock": stk_val,
+                        "current_stock": stk_val,
                         "unit": p.unit or "Nos",
                         "purchase_price": price_val,
+                        "price": price_val,
                         "stock_valuation": item_valuation,
                         "specifications": p.specifications or {},
                     })
@@ -5288,13 +5402,23 @@ def get_stock_by_category_type(db: Session = Depends(get_db)):
                     stk_val = float(p.get("stock") or 0.0)
                     price_val = float(p.get("purchasePrice") or p.get("price") or 0.0)
                     item_valuation = round(stk_val * price_val, 2)
+                    p_id = p["id"]
+                    p_sku = p.get("sku") or p_id
+                    si = stock_in_by_sku.get(str(p_sku).lower()) or stock_in_by_sku.get(str(p_id).lower())
                     cat_products_list.append({
-                        "id": p["id"],
+                        "id": p_id,
+                        "product_id": si.product_id if si else None,
+                        "product_code": p_sku,
+                        "stock_id": si.id if si else p_id,
+                        "stock_in_id": si.id if si else None,
+                        "receipt_no": si.receipt_no if si else None,
                         "name": p["name"],
-                        "sku": p.get("sku") or p["id"],
+                        "sku": p_sku,
                         "stock": stk_val,
+                        "current_stock": stk_val,
                         "unit": p.get("unit") or "Nos",
                         "purchase_price": price_val,
+                        "price": price_val,
                         "stock_valuation": item_valuation,
                         "specifications": p.get("specifications") or {},
                     })
@@ -5367,6 +5491,16 @@ def get_stock_in_product_picker(db: Session = Depends(get_db)):
         for cat in cat_list:
             products_by_category[cat] = []
 
+    # Index existing Stock In receipts
+    all_stock_ins = db.query(StockIn).order_by(StockIn.id.desc()).all()
+    stock_in_by_prod_id = {}
+    stock_in_by_sku = {}
+    for si in all_stock_ins:
+        if si.product_id and si.product_id not in stock_in_by_prod_id:
+            stock_in_by_prod_id[si.product_id] = si
+        if si.product_sku and si.product_sku.lower() not in stock_in_by_sku:
+            stock_in_by_sku[si.product_sku.lower()] = si
+
     # Map DB products
     for p in db_products:
         cat_name = p.category_name or "Other Product"
@@ -5375,10 +5509,23 @@ def get_stock_in_product_picker(db: Session = Depends(get_db)):
         if cat_name not in products_by_category:
             products_by_category[cat_name] = []
 
+        p_code = p.product_code or f"PROD{p.id:03d}"
+        p_sku = p.model_number or p_code
+        si = (
+            stock_in_by_prod_id.get(p.id)
+            or stock_in_by_sku.get(str(p.product_code or "").lower())
+            or stock_in_by_sku.get(str(p.model_number or "").lower())
+        )
+
         products_by_category[cat_name].append({
-            "id": p.product_code or f"PROD{p.id:03d}",
+            "id": p_code,
+            "product_id": p.id,
+            "product_code": p_code,
+            "stock_id": si.id if si else p.id,
+            "stock_in_id": si.id if si else None,
+            "receipt_no": si.receipt_no if si else None,
             "name": p.product_name,
-            "sku": p.model_number or p.product_code or f"SKU-{p.id:03d}",
+            "sku": p_sku,
             "unit": p.unit or "Nos",
             "purchasePrice": float(p.purchase_price or p.selling_price or 0.0),
             "price": float(p.purchase_price or p.selling_price or 0.0),
@@ -5393,13 +5540,21 @@ def get_stock_in_product_picker(db: Session = Depends(get_db)):
     # Fill defaults for categories that are empty
     for cat, items in default_products.items():
         if cat not in products_by_category or not products_by_category[cat]:
-            products_by_category[cat] = [
-                {
+            def_items = []
+            for it in items:
+                p_id = it.get("id")
+                p_sku = it.get("sku") or p_id
+                si = stock_in_by_sku.get(str(p_sku).lower()) or stock_in_by_sku.get(str(p_id).lower())
+                def_items.append({
                     **it,
+                    "product_id": si.product_id if si else None,
+                    "product_code": p_sku,
+                    "stock_id": si.id if si else p_id,
+                    "stock_in_id": si.id if si else None,
+                    "receipt_no": si.receipt_no if si else None,
                     "current_stock": it.get("stock", 0.0),
-                }
-                for it in items
-            ]
+                })
+            products_by_category[cat] = def_items
 
     # Calculate stock summary per category type
     stock_by_category_type = {}
@@ -5670,6 +5825,11 @@ def list_stock_in_receipts(
     inspection_status: Optional[str] = Query(None),
     supplier_name: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    product_id: Optional[Union[int, str]] = Query(None),
+    product_sku: Optional[str] = Query(None),
+    receipt_no: Optional[str] = Query(None),
+    id: Optional[Union[int, str]] = Query(None),
+    stock_id: Optional[Union[int, str]] = Query(None),
     db: Session = Depends(get_db),
 ):
     query = db.query(StockIn)
@@ -5688,6 +5848,27 @@ def list_stock_in_receipts(
         query = query.filter(StockIn.supplier_name.ilike(f"%{supplier_name.strip()}%"))
     if status:
         query = query.filter(StockIn.status.ilike(status.strip()))
+
+    if product_id is not None and str(product_id).strip():
+        val = str(product_id).strip()
+        if val.isdigit():
+            query = query.filter(StockIn.product_id == int(val))
+        else:
+            query = query.filter(StockIn.product_sku.ilike(val))
+
+    if product_sku:
+        query = query.filter(StockIn.product_sku.ilike(product_sku.strip()))
+
+    if receipt_no:
+        query = query.filter(StockIn.receipt_no.ilike(receipt_no.strip()))
+
+    rec_id = id if id is not None else stock_id
+    if rec_id is not None and str(rec_id).strip():
+        val = str(rec_id).strip()
+        if val.isdigit():
+            query = query.filter(or_(StockIn.id == int(val), StockIn.product_id == int(val)))
+        else:
+            query = query.filter(or_(StockIn.receipt_no.ilike(val), StockIn.product_sku.ilike(val)))
 
     if search:
         pat = f"%{search.strip()}%"
@@ -5773,32 +5954,296 @@ def get_stock_in_metadata():
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 9. Single Stock In Detail
+# 9. Intelligent Stock In / Inventory Detail Resolvers
 # ──────────────────────────────────────────────────────────────────────────────
 
-@router.get("/stock-in/{stock_id}")
-@router.get("/stock-ins/{stock_id}")
-def get_stock_in_detail(stock_id: int, db: Session = Depends(get_db)):
-    stk = db.query(StockIn).filter(StockIn.id == stock_id).first()
-    if not stk:
-        raise HTTPException(status_code=404, detail="Stock In receipt not found")
-    return format_stock_in_response(stk)
+def format_product_as_stock_in_response(prod: Product) -> dict:
+    """Formats an inventory Product as a Stock In response when no receipt exists yet."""
+    price = float(prod.purchase_price or prod.selling_price or 0.0)
+    stk_val = float(prod.stock or 0.0)
+    sku = prod.model_number or prod.product_code or f"SKU-{prod.id:03d}"
+    cat_type = (prod.category_type or "General").capitalize()
+    cat_name = prod.category_name or cat_type
+    gross = round(stk_val * price, 2)
+    taxable = gross
+    gst_amt = round(taxable * 0.18, 2)
+    total = round(taxable + gst_amt, 2)
+    return {
+        "id": prod.id,
+        "stock_id": prod.id,
+        "stock_in_id": None,
+        "receipt_no": f"STK-PROD-{prod.id:04d}",
+        "receipt_date": datetime.now().strftime("%d %b %Y"),
+        "po_number": None,
+        "invoice_no": None,
+        "invoice_date": None,
+        "supplier_id": 1,
+        "supplier_code": "SUP001",
+        "supplier_name": "In-House Stock",
+        "supplier_contact": "",
+        "product_id": prod.id,
+        "product_sku": sku,
+        "product_code": prod.product_code or sku,
+        "sku": sku,
+        "product_type": cat_type,
+        "category": cat_name,
+        "product_name": prod.product_name,
+        "product": prod.product_name,
+        "specifications": prod.specifications if isinstance(prod.specifications, dict) else {},
+        "quantity": stk_val,
+        "stock": stk_val,
+        "current_stock": stk_val,
+        "unit": prod.unit or "Nos",
+        "warehouse": "Main Warehouse",
+        "rack": "General Store",
+        "batch_no": None,
+        "serial_no": None,
+        "rate": price,
+        "price": price,
+        "purchase_price": price,
+        "discount": 0.0,
+        "gst": 18.0,
+        "gross_amount": gross,
+        "taxable_amount": taxable,
+        "gst_amount": gst_amt,
+        "total_amount": total,
+        "received_by": "Inventory Manager",
+        "condition": "Good",
+        "inspection_status": "Passed",
+        "inspection_remarks": "Product inventory on hand",
+        "notes": "Current inventory stock",
+        "status": "In Stock",
+        "created_at": prod.created_at.isoformat() if prod.created_at else None,
+        "updated_at": prod.updated_at.isoformat() if prod.updated_at else None,
+    }
+
+
+def format_default_item_as_stock_in(item: dict, category_name: str) -> dict:
+    """Formats a static default product master item as a Stock In response."""
+    price = float(item.get("purchasePrice") or item.get("price") or 0.0)
+    stk_val = float(item.get("stock") or 0.0)
+    item_id = item.get("id") or "ITEM001"
+    sku = item.get("sku") or item_id
+    gross = round(stk_val * price, 2)
+    taxable = gross
+    gst_amt = round(taxable * 0.18, 2)
+    total = round(taxable + gst_amt, 2)
+    return {
+        "id": item_id,
+        "stock_id": item_id,
+        "stock_in_id": None,
+        "receipt_no": f"STK-DEF-{item_id}",
+        "receipt_date": datetime.now().strftime("%d %b %Y"),
+        "po_number": None,
+        "invoice_no": None,
+        "invoice_date": None,
+        "supplier_id": 1,
+        "supplier_code": "SUP001",
+        "supplier_name": "Default Master Supplier",
+        "supplier_contact": "",
+        "product_id": None,
+        "product_sku": sku,
+        "product_code": sku,
+        "sku": sku,
+        "product_type": item.get("type") or "General",
+        "category": category_name,
+        "product_name": item.get("name") or item_id,
+        "product": item.get("name") or item_id,
+        "specifications": item.get("specifications") if isinstance(item.get("specifications"), dict) else {},
+        "quantity": stk_val,
+        "stock": stk_val,
+        "current_stock": stk_val,
+        "unit": item.get("unit") or "Nos",
+        "warehouse": "Main Warehouse",
+        "rack": "Rack-01",
+        "batch_no": None,
+        "serial_no": None,
+        "rate": price,
+        "price": price,
+        "purchase_price": price,
+        "discount": 0.0,
+        "gst": 18.0,
+        "gross_amount": gross,
+        "taxable_amount": taxable,
+        "gst_amount": gst_amt,
+        "total_amount": total,
+        "received_by": "Store Admin",
+        "condition": "Good",
+        "inspection_status": "Passed",
+        "inspection_remarks": "Master inventory item",
+        "notes": "Master item",
+        "status": "In Stock",
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat(),
+    }
+
+
+def find_stock_in_entity(identifier: Union[int, str], db: Session) -> Optional[StockIn]:
+    """
+    Finds the underlying StockIn database model instance by any identifier:
+    - Integer StockIn ID (e.g. 1)
+    - Product ID in StockIn (e.g. 11, 15, 28)
+    - Receipt Number (e.g. STK-IN-260915-0001)
+    - Product SKU / Code (e.g. LFT-001, GEN-002, PNL-001)
+    - Invoice Number
+    - PO Number
+    - Serial Number or Batch Number
+    - Product ID / Code from products table that has a StockIn receipt
+    """
+    if identifier is None:
+        return None
+    val = str(identifier).strip()
+    if not val or val.lower() in ("next-receipt-number", "suppliers", "category-stock", "stock-by-category", "product-picker", "products", "calculate", "meta"):
+        return None
+
+    if val.isdigit():
+        int_id = int(val)
+        # 1. Exact StockIn primary key id
+        stk = db.query(StockIn).filter(StockIn.id == int_id).first()
+        if stk:
+            return stk
+        # 2. Exact StockIn.product_id
+        stk = db.query(StockIn).filter(StockIn.product_id == int_id).order_by(StockIn.id.desc()).first()
+        if stk:
+            return stk
+
+    # 3. Exact receipt_no (case-insensitive)
+    stk = db.query(StockIn).filter(StockIn.receipt_no.ilike(val)).first()
+    if stk:
+        return stk
+
+    # 4. Product SKU or Code
+    stk = db.query(StockIn).filter(StockIn.product_sku.ilike(val)).order_by(StockIn.id.desc()).first()
+    if stk:
+        return stk
+
+    # 5. Invoice No
+    stk = db.query(StockIn).filter(StockIn.invoice_no.ilike(val)).order_by(StockIn.id.desc()).first()
+    if stk:
+        return stk
+
+    # 6. PO Number
+    stk = db.query(StockIn).filter(StockIn.po_number.ilike(val)).order_by(StockIn.id.desc()).first()
+    if stk:
+        return stk
+
+    # 7. Serial No or Batch No
+    stk = db.query(StockIn).filter(or_(StockIn.serial_no.ilike(val), StockIn.batch_no.ilike(val))).first()
+    if stk:
+        return stk
+
+    # 8. Check if identifier matches a Product (by code, SKU, or name) that has a StockIn receipt
+    prod = None
+    if val.isdigit():
+        prod = db.query(Product).filter(Product.id == int(val)).first()
+    if not prod:
+        prod = db.query(Product).filter(
+            or_(
+                Product.product_code.ilike(val),
+                Product.model_number.ilike(val),
+                Product.product_name.ilike(val),
+            )
+        ).first()
+
+    if prod:
+        stk = db.query(StockIn).filter(StockIn.product_id == prod.id).order_by(StockIn.id.desc()).first()
+        if stk:
+            return stk
+
+    return None
+
+
+def find_stock_in_record(identifier: Union[int, str], db: Session) -> Optional[dict]:
+    """
+    Unified resolver that returns the complete formatted stock in / inventory detail dictionary.
+    First checks StockIn database table; if not present as a receipt, checks Product table and master defaults.
+    """
+    stk = find_stock_in_entity(identifier, db)
+    if stk:
+        return format_stock_in_response(stk)
+
+    if identifier is None:
+        return None
+    val = str(identifier).strip()
+    if not val or val.lower() in ("next-receipt-number", "suppliers", "category-stock", "stock-by-category", "product-picker", "products", "calculate", "meta"):
+        return None
+
+    # Check if a Product exists in DB for this identifier
+    prod = None
+    if val.isdigit():
+        prod = db.query(Product).filter(Product.id == int(val)).first()
+    if not prod:
+        prod = db.query(Product).filter(
+            or_(
+                Product.product_code.ilike(val),
+                Product.model_number.ilike(val),
+                Product.product_name.ilike(val),
+            )
+        ).first()
+
+    if prod:
+        return format_product_as_stock_in_response(prod)
+
+    # Check default products master
+    _, _, default_prods = get_default_stock_master()
+    for cat_name, items in default_prods.items():
+        for it in items:
+            if (
+                str(it.get("id", "")).strip().lower() == val.lower()
+                or str(it.get("sku", "")).strip().lower() == val.lower()
+                or str(it.get("name", "")).strip().lower() == val.lower()
+            ):
+                return format_default_item_as_stock_in(it, cat_name)
+
+    return None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 10. Update Stock In Record
+# 10. Single Stock In Detail (Accepts ANY ID: StockIn ID, Receipt No, Product ID, SKU)
 # ──────────────────────────────────────────────────────────────────────────────
 
-@router.put("/stock-in/{stock_id}")
-@router.put("/stock-ins/{stock_id}")
+@router.get("/stock-in/product/{product_id}")
+@router.get("/stock-ins/product/{product_id}")
+@router.get("/stock-in/by-product/{product_id}")
+def get_stock_in_by_product(product_id: str, db: Session = Depends(get_db)):
+    detail = find_stock_in_record(product_id, db)
+    if not detail:
+        raise HTTPException(status_code=404, detail=f"Stock In detail not found for product '{product_id}'")
+    return detail
+
+
+@router.get("/stock-in/receipt/{receipt_no}")
+@router.get("/stock-ins/receipt/{receipt_no}")
+def get_stock_in_by_receipt(receipt_no: str, db: Session = Depends(get_db)):
+    detail = find_stock_in_record(receipt_no, db)
+    if not detail:
+        raise HTTPException(status_code=404, detail=f"Stock In detail not found for receipt '{receipt_no}'")
+    return detail
+
+
+@router.get("/stock-in/{stock_id:path}")
+@router.get("/stock-ins/{stock_id:path}")
+def get_stock_in_detail(stock_id: str, db: Session = Depends(get_db)):
+    detail = find_stock_in_record(stock_id, db)
+    if not detail:
+        raise HTTPException(status_code=404, detail=f"Stock In receipt not found for identifier '{stock_id}'")
+    return detail
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 11. Update Stock In Record (Accepts ANY identifier)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.put("/stock-in/{stock_id:path}")
+@router.put("/stock-ins/{stock_id:path}")
 async def update_stock_in(
-    stock_id: int,
+    stock_id: str,
     request: Request,
     db: Session = Depends(get_db),
 ):
-    stk = db.query(StockIn).filter(StockIn.id == stock_id).first()
+    stk = find_stock_in_entity(stock_id, db)
     if not stk:
-        raise HTTPException(status_code=404, detail="Stock In receipt not found")
+        raise HTTPException(status_code=404, detail=f"Stock In receipt not found for identifier '{stock_id}'")
 
     try:
         payload = await request.json()
@@ -5878,15 +6323,15 @@ async def update_stock_in(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 11. Delete Stock In Record (Rolls back Product Stock)
+# 12. Delete Stock In Record (Rolls back Product Stock, accepts ANY identifier)
 # ──────────────────────────────────────────────────────────────────────────────
 
-@router.delete("/stock-in/{stock_id}")
-@router.delete("/stock-ins/{stock_id}")
-def delete_stock_in(stock_id: int, db: Session = Depends(get_db)):
-    stk = db.query(StockIn).filter(StockIn.id == stock_id).first()
+@router.delete("/stock-in/{stock_id:path}")
+@router.delete("/stock-ins/{stock_id:path}")
+def delete_stock_in(stock_id: str, db: Session = Depends(get_db)):
+    stk = find_stock_in_entity(stock_id, db)
     if not stk:
-        raise HTTPException(status_code=404, detail="Stock In receipt not found")
+        raise HTTPException(status_code=404, detail=f"Stock In receipt not found for identifier '{stock_id}'")
 
     receipt_num = stk.receipt_no
     qty_to_revert = float(stk.quantity or 0.0)

@@ -23,13 +23,22 @@ Power_solution/
 
 ## How to Run the Project
 
-### Option 1: Django Style (Recommended)
+### Option 1: CLI Runner (manage.py)
 ```bash
+# Start development server
 python manage.py runserver
-```
-Or specify a custom port:
-```bash
+
+# Specify custom port
 python manage.py runserver 8000
+
+# Synchronize database tables (SQLAlchemy)
+python manage.py migrate
+
+# Check database connection & list tables
+python manage.py checkdb
+
+# Create an administrator account
+python manage.py createsuperuser
 ```
 
 ### Option 2: Direct Python
