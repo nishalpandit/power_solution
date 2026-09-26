@@ -13,6 +13,7 @@ uploads_dir = os.path.join(BASE_DIR, "uploads")
 os.makedirs(os.path.join(uploads_dir, "categories"), exist_ok=True)
 os.makedirs(os.path.join(uploads_dir, "products"), exist_ok=True)
 os.makedirs(os.path.join(uploads_dir, "payments"), exist_ok=True)
+os.makedirs(os.path.join(uploads_dir, "complaints"), exist_ok=True)
 
 # Initialize database tables
 ensure_database_schema()

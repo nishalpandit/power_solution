@@ -1,0 +1,71 @@
+# Complaint Screen API Documentation
+
+Bearer token is compulsory for endpoints requiring user authentication.
+
+---
+
+## 1. Raise Complaint (User Facing)
+
+url : (http://<your_server_ip>:8000/api/complaints)
+method : POST
+
+headers :- 
+
+Authorization: Bearer <user_login_token> (Required if you link complaint to user)
+Content-Type: multipart/form-data
+
+Request Parameters (Form Data):
+- customer_name    (String) : Optional. Name of the customer.
+- phone            (String) : Optional. Phone number of the customer.
+- email            (String) : Optional. Email address of the customer.
+- product_category (String) : Required. The product or category the complaint is for.
+- description      (String) : Required. Detailed description of the complaint.
+- complaint_date   (String) : Required. The date the complaint is raised.
+- photo            (File)   : Optional. Photo attachment for the complaint (e.g., JPG, PNG).
+
+response :- 
+
+{
+  "id": 1,
+  "customer_name": "customerName",
+  "phone": "phone",
+  "email": "email",
+  "product_category": "Lift",
+  "description": "Lift is making weird noise on 3rd floor.",
+  "complaint_date": "18 May 2025",
+  "photo": "/uploads/complaints/complaint_1234567890abcdef.jpg",
+  "status": "Pending",
+  "user_id": null,
+  "created_at": "2025-05-18T10:00:00Z",
+  "updated_at": "2025-05-18T10:00:00Z"
+}
+
+---
+
+## 2. List Complaints (Admin Facing)
+
+url : (http://<your_server_ip>:8000/api/admin/complaints)
+method : GET
+
+headers :- 
+
+Authorization: Bearer <admin_login_token> (Required)
+
+response :- 
+
+[
+  {
+    "id": 1,
+    "customer_name": "customerName",
+    "phone": "phone",
+    "email": "email",
+    "product_category": "Lift",
+    "description": "Lift is making weird noise on 3rd floor.",
+    "complaint_date": "18 May 2025",
+    "photo": "/uploads/complaints/complaint_1234567890abcdef.jpg",
+    "status": "Pending",
+    "user_id": null,
+    "created_at": "2025-05-18T10:00:00Z",
+    "updated_at": "2025-05-18T10:00:00Z"
+  }
+]

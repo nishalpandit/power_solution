@@ -194,6 +194,7 @@ def parse_string_or_list(value: Any) -> List[str]:
 class ProductBaseRequest(BaseModel):
     category_id: Optional[Union[int, str]] = None
     category_name: Optional[str] = None
+    customer_name: Optional[str] = None
     product_name: str
     product_code: str  # SKU
     brand: Optional[str] = None
@@ -751,6 +752,7 @@ class ProductResponse(BaseModel):
     category_type: str
     category_id: Optional[int] = None
     category_name: Optional[str] = None
+    customer_name: Optional[str] = None
     product_name: str
     product_code: str
     brand: Optional[str] = None
@@ -1439,7 +1441,7 @@ class StockInCreateRequest(BaseModel):
     receipt_no: Optional[str] = None
     receipt_date: Optional[str] = None
     po_number: Optional[str] = None
-    invoice_no: str
+    invoice_no: Optional[str] = None
     invoice_date: Optional[str] = None
 
     supplier_id: Optional[Any] = None
@@ -1709,9 +1711,31 @@ class InvoiceResponse(BaseModel):
 
     model_config = {"from_attributes": True, "extra": "allow"}
 
+# ==============================================================================
+# COMPLAINT SCHEMAS
+# ==============================================================================
 
+class ComplaintCreateRequest(BaseModel):
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    product_category: str
+    description: str
+    complaint_date: str
 
+class ComplaintResponse(BaseModel):
+    id: int
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    product_category: str
+    description: str
+    complaint_date: str
+    photo: Optional[str] = None
+    status: str
+    user_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
 
-
-
+    model_config = {"from_attributes": True}
 

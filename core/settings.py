@@ -158,6 +158,15 @@ def ensure_database_schema():
                 connection.exec_driver_sql("DROP TABLE users_legacy")
                 return
 
+        # Check and migrate products columns
+        prod_table = connection.exec_driver_sql(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='products'"
+        ).fetchone()
+        if prod_table:
+            prod_cols = {col[1] for col in connection.exec_driver_sql("PRAGMA table_info(products)").fetchall()}
+            if "customer_name" not in prod_cols:
+                connection.exec_driver_sql("ALTER TABLE products ADD COLUMN customer_name VARCHAR(150)")
+
         # Check and migrate invoices columns
         inv_table = connection.exec_driver_sql(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='invoices'"

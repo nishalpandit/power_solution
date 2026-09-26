@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Reques
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
-from api.models import Category, CashBill, Invoice, Order, Payment, Product, PurchaseOrder, Quotation, StockIn, Supplier, User
+from api.models import Category, CashBill, Complaint, Invoice, Order, Payment, Product, PurchaseOrder, Quotation, StockIn, Supplier, User
 from api.schemas import (
     AdminLoginRequest,
     CashBillCalculateRequest,
@@ -53,6 +53,8 @@ from api.schemas import (
     UserLoginRequest,
     UserRegisterRequest,
     UserResponse,
+    ComplaintCreateRequest,
+    ComplaintResponse,
 )
 from core.auth import create_access_token, get_current_user, hash_password, require_admin, verify_password
 from core.settings import get_db
@@ -628,6 +630,7 @@ def format_product_response(product: Product) -> dict:
         "category_name_id": product.category_id,
         "category_id": product.category_id,
         "category_name": product.category_name,
+        "customer_name": product.customer_name,
         "product_name": product.product_name,
         "product_code": product.product_code,
         "brand": product.brand,
@@ -683,6 +686,7 @@ def save_new_product(
         category_type=category_type.lower().strip(),
         category_id=cat_id,
         category_name=cat_name,
+        customer_name=payload.customer_name.strip() if payload.customer_name else None,
         product_name=payload.product_name.strip(),
         product_code=code,
         brand=payload.brand.strip() if payload.brand else None,
@@ -5667,9 +5671,7 @@ async def create_stock_in(
     if rate <= 0:
         raise HTTPException(status_code=422, detail="Please enter valid rate.")
 
-    invoice_no = str(payload.get("invoice_no") or "").strip()
-    if not invoice_no:
-        raise HTTPException(status_code=422, detail="Invoice No. is required.")
+    invoice_no = str(payload.get("invoice_no") or "").strip() or None
 
     # Receipt Number
     receipt_no = str(payload.get("receipt_no") or "").strip()
@@ -6257,8 +6259,8 @@ async def update_stock_in(
         stk.receipt_date = str(payload["receipt_date"]).strip()
     if "po_number" in payload:
         stk.po_number = str(payload["po_number"]).strip() or None
-    if "invoice_no" in payload and payload["invoice_no"]:
-        stk.invoice_no = str(payload["invoice_no"]).strip()
+    if "invoice_no" in payload:
+        stk.invoice_no = str(payload["invoice_no"]).strip() if payload["invoice_no"] else None
     if "invoice_date" in payload:
         stk.invoice_date = str(payload["invoice_date"]).strip()
 
@@ -7465,10 +7467,67 @@ def delete_invoice(invoice_id: str, db: Session = Depends(get_db)):
 
 
 
+# ==============================================================================
+# COMPLAINT APIs
+# ==============================================================================
+
+@router.post("/complaints", response_model=ComplaintResponse, status_code=status.HTTP_201_CREATED)
+async def raise_complaint(
+    product_category: str = Form(...),
+    description: str = Form(...),
+    complaint_date: str = Form(...),
+    customer_name: Optional[str] = Form(None),
+    phone: Optional[str] = Form(None),
+    email: Optional[str] = Form(None),
+    photo: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    # To require auth, we could add: current_user: User = Depends(get_current_user)
+):
+    """
+    Raise a new complaint.
+    """
+    photo_url = None
+    if photo and photo.filename:
+        upload_dir = Path("uploads") / "complaints"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        
+        ext = photo.filename.split(".")[-1] if "." in photo.filename else "jpg"
+        unique_name = f"complaint_{uuid.uuid4().hex}.{ext}"
+        file_path = upload_dir / unique_name
+        
+        with open(file_path, "wb") as f:
+            f.write(await photo.read())
+            
+        photo_url = f"/uploads/complaints/{unique_name}"
+
+    complaint = Complaint(
+        customer_name=customer_name,
+        phone=phone,
+        email=email,
+        product_category=product_category,
+        description=description,
+        complaint_date=complaint_date,
+        photo=photo_url,
+        status="Pending",
+        # user_id=current_user.id
+    )
+    
+    db.add(complaint)
+    db.commit()
+    db.refresh(complaint)
+    return complaint
 
 
-
-
+@router.get("/admin/complaints", response_model=list[ComplaintResponse])
+def get_admin_complaints(
+    db: Session = Depends(get_db),
+    # admin: User = Depends(require_admin)
+):
+    """
+    List all complaints for the admin dashboard.
+    """
+    complaints = db.query(Complaint).order_by(Complaint.created_at.desc()).all()
+    return complaints
 
 
 

@@ -60,6 +60,7 @@ class Product(Base):
     product_name = Column(String(150), nullable=False, index=True)
     product_code = Column(String(100), unique=True, nullable=False, index=True)  # SKU
     brand = Column(String(100), nullable=True)
+    customer_name = Column(String(150), nullable=True)
     model_number = Column(String(100), nullable=True)
     description = Column(Text, nullable=True)
 
@@ -435,7 +436,7 @@ class StockIn(Base):
     receipt_no = Column(String(60), unique=True, index=True, nullable=False)
     receipt_date = Column(String(50), nullable=False)
     po_number = Column(String(60), nullable=True, index=True)
-    invoice_no = Column(String(60), nullable=False, index=True)
+    invoice_no = Column(String(60), nullable=True, index=True)
     invoice_date = Column(String(50), nullable=False)
 
     # Supplier Details
@@ -494,7 +495,26 @@ class StockIn(Base):
 
 
 
+class Complaint(Base):
+    __tablename__ = "complaints"
 
+    id = Column(Integer, primary_key=True, index=True)
+    customer_name = Column(String(150), nullable=True)
+    phone = Column(String(20), nullable=True)
+    email = Column(String(120), nullable=True)
+    product_category = Column(String(100), nullable=False)
+    description = Column(Text, nullable=False)
+    complaint_date = Column(String(50), nullable=False)
+    photo = Column(String(255), nullable=True)
+    status = Column(String(30), default="Pending", nullable=False)  # Pending, In Progress, Resolved, Closed
 
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    user = relationship("User", backref="complaints")
+
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    def __repr__(self):
+        return f"<Complaint id={self.id} category='{self.product_category}' status='{self.status}'>"
 
 
